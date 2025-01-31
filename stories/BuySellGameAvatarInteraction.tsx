@@ -1,0 +1,91 @@
+import { cn } from "@/lib/utils";
+import Link from "next/link";
+import { FC } from "react";
+import { AgentAvatarInteraction } from "./AgentAvatarInteraction";
+import { BullBearRatioBar } from "./BullBearRatioBar";
+
+interface BuySellGameAvatarInteractionProps {
+  id: number;
+  name: string;
+  borderColor: string;
+  imageUrl?: string;
+  betAmount: number;
+  betType?: "Buy" | "Sell";
+  bearAmount: number;
+  bullAmount: number;
+  variant?: "slim" | "full";
+  showName?: boolean;
+}
+
+export const BuySellGameAvatarInteraction: FC<
+  BuySellGameAvatarInteractionProps
+> = ({
+  id,
+  name,
+  borderColor,
+  imageUrl,
+  betAmount,
+  betType,
+  bearAmount,
+  bullAmount,
+  variant = "full",
+  showName = true,
+}) => {
+  const total = bearAmount + bullAmount;
+  const bearPercentage = total > 0 ? (bearAmount / total) * 100 : 0;
+  const bullPercentage = total > 0 ? (bullAmount / total) * 100 : 0;
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex flex-col items-center gap-2">
+        <AgentAvatarInteraction
+          name={name}
+          borderColor={borderColor}
+          imageUrl={imageUrl}
+          betAmount={betAmount}
+          betType={betType}
+        />
+        {showName && (
+          <Link
+            href={`/agent/${id}`}
+            className="text-2xl font-medium truncate max-w-full"
+            style={{ color: borderColor }}
+          >
+            {name}
+          </Link>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        {variant === "full" && (
+          <div className="flex flex-col items-center justify-center w-12">
+            <img src={"/assets/bear.svg"} alt="Bear" className="w-6 h-6" />
+            <div
+              className={cn(
+                "text-sm font-medium",
+                total > 0 ? "text-[rgb(var(--bear-red))]" : "text-white"
+              )}
+            >
+              {bearPercentage.toFixed(1)}%
+            </div>
+          </div>
+        )}
+        <div className="flex-1">
+          <BullBearRatioBar bearAmount={bearAmount} bullAmount={bullAmount} />
+        </div>
+        {variant === "full" && (
+          <div className="flex flex-col items-center justify-center w-12">
+            <img src={"/assets/bull.svg"} alt="Bull" className="w-6 h-6" />
+            <div
+              className={cn(
+                "text-sm font-medium",
+                total > 0 ? "text-[rgb(var(--bull-green))]" : "text-white"
+              )}
+            >
+              {bullPercentage.toFixed(1)}%
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
