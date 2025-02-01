@@ -100,9 +100,9 @@ export function RoomTable({
     <div className="space-y-8">
       {showTabs && (
         <div className="flex justify-center">
-          <div className="bg-secondary/50 p-1.5 rounded-lg">
+          <div className="bg-secondary/30 p-1.5 rounded-lg">
             <AnimatedBackground
-              className="bg-white dark:bg-gray-800 rounded-md"
+              className="bg-secondary/50 rounded-md"
               defaultValue={selectedType}
               onValueChange={handleTypeChange}
             >
@@ -133,7 +133,7 @@ export function RoomTable({
               top: 0,
               left: 0,
             }}
-            className="bg-[hsl(var(--table-background))] px-4 pt-2 pb-4 rounded-[calc(var(--radius))]"
+            className="bg-secondary/20 px-4 pt-2 pb-4 rounded-[calc(var(--radius))]"
           >
             <Table>
               <TableHeader>

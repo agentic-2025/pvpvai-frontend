@@ -21,7 +21,7 @@ export function RoomTableRow({
   showRoomType,
   style,
   showToken,
-  className = "hover:bg-gray-50 dark:hover:bg-gray-800",
+  className = "hover:bg-secondary/20",
 }: RoomTableRowProps) {
   const timer = formatTimeLeft(
     new Date(room.round_ends_on || "000000").getTime() / 1000
