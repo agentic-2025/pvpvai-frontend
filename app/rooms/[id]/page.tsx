@@ -1,13 +1,13 @@
 "use client";
 import Loader from "@/components/loader";
+import { Input } from "@/components/ui/input";
 import supabase from "@/lib/config";
 import { AgentChat } from "@/stories/AgentChat";
 import { BuySellGameAvatarInteraction } from "@/stories/BuySellGameAvatarInteraction";
 import { RoomWithRelations } from "@/stories/RoomTable";
-import { useEffect, useState, useRef } from "react";
-import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { Input } from "@/components/ui/input";
+import { useParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 export default function RoomDetailPage() {
   const params = useParams();
@@ -31,6 +31,7 @@ export default function RoomDetailPage() {
 
   useEffect(() => {
     const loadRoomDetails = async () => {
+      if (!id || Array.isArray(id)) return;
       try {
         const { data: roomData, error } = await supabase
           .from("rooms")
@@ -65,7 +66,7 @@ export default function RoomDetailPage() {
             )
           `
           )
-          .eq("id", parseInt(id))
+          .eq("rooms.id", parseInt(id))
           .order("created_at", { referencedTable: "rounds", ascending: false })
           .single();
 
@@ -132,7 +133,9 @@ export default function RoomDetailPage() {
   // WebSocket connection for real-time user messages
   useEffect(() => {
     const initWebSocket = () => {
-      const ws = new WebSocket("ws://localhost:3000/ws");
+      const ws = new WebSocket(
+        `ws://${process.env.NEXT_PUBLIC_BACKEND_URL}/ws`
+      );
 
       ws.onopen = () => {
         console.log("WebSocket connected");
@@ -166,7 +169,7 @@ export default function RoomDetailPage() {
         wsConnection.close();
       }
     };
-  }, [id]);
+  }, [id, wsConnection]);
 
   if (loading) {
     return <Loader />;
