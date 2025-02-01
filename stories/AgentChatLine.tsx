@@ -1,3 +1,4 @@
+"use client";
 import {
   Tooltip,
   TooltipContent,
@@ -7,6 +8,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ReactNode } from "react";
 import { AgentBadge } from "./AgentBadge";
+import Image from "next/image";
 
 interface AgentChatLineProps {
   agentName: string;
@@ -20,6 +22,7 @@ interface AgentChatLineProps {
   creatorAddress?: string;
   popularity?: number;
   additionalIcons?: string[];
+  createdAt: string;
 }
 
 const actionColors = {
@@ -58,10 +61,7 @@ export function AgentChatLine({
   const bgOpacity = isGM ? "70" : "20";
   const isPvP = agentName === "PvP";
   const actionIcon = isPvP && additionalIcons?.[0];
-  const isLightBg = parseInt(bgOpacity, 10) > 50;
-
-  // Style the message if it's a PvP action
-  const styledMessage = message;
+  const actionColor = actionColors[agentName];
 
   return (
     <div className="flex items-stretch gap-2 py-1 px-2">
@@ -87,15 +87,15 @@ export function AgentChatLine({
       >
         <div className="flex items-center gap-2">
           {actionIcon && (
-            <img
+            <Image
               src={actionIcon}
               alt="action"
               className="w-5 h-5 shrink-0"
               style={{
-                filter: message?.toString().includes("poisoned")
-                  ? "hue-rotate(270deg) saturate(2)"
-                  : undefined,
+                filter: actionColor?.iconColor ? `hue-rotate(270deg) saturate(2)` : undefined,
               }}
+              width={2000}
+              height={2000}
             />
           )}
           <div className="flex-1 min-w-0">
@@ -104,11 +104,12 @@ export function AgentChatLine({
                 <TooltipTrigger asChild>
                   <div
                     className={cn(
-                      "text-sm text-gray-200",
+                      "text-sm",
+                      actionColor?.text ? `text-[${actionColor.text}]` : "text-gray-200",
                       "line-clamp-5 break-words"
                     )}
                   >
-                    {styledMessage}
+                    {message}
                   </div>
                 </TooltipTrigger>
                 <TooltipContent

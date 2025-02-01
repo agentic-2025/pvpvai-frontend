@@ -3,6 +3,9 @@ import Link from "next/link";
 import { FC } from "react";
 import { AgentAvatarInteraction } from "./AgentAvatarInteraction";
 import { BullBearRatioBar } from "./BullBearRatioBar";
+import bullIcon from "@/stories/assets/bull.svg";
+import bearIcon from "@/stories/assets/bear.svg";
+import Image from "next/image";
 
 interface BuySellGameAvatarInteractionProps {
   id: number;
@@ -58,7 +61,7 @@ export const BuySellGameAvatarInteraction: FC<
       <div className="flex items-center gap-2">
         {variant === "full" && (
           <div className="flex flex-col items-center justify-center w-12">
-            <img src={"/assets/bear.svg"} alt="Bear" className="w-6 h-6" />
+            <Image src={bearIcon} alt="Bear" className="w-6 h-6" />
             <div
               className={cn(
                 "text-sm font-medium",
@@ -74,7 +77,7 @@ export const BuySellGameAvatarInteraction: FC<
         </div>
         {variant === "full" && (
           <div className="flex flex-col items-center justify-center w-12">
-            <img src={"/assets/bull.svg"} alt="Bull" className="w-6 h-6" />
+            <Image src={bullIcon} alt="Bull" className="w-6 h-6" />
             <div
               className={cn(
                 "text-sm font-medium",

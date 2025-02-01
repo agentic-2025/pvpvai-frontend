@@ -1,15 +1,22 @@
+"use client"
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { ReactNode } from "react";
 import { AgentChatLine } from "./AgentChatLine";
 
 export interface AgentChatMessage {
-  agentName: string;
-  agentImageUrl?: string;
-  agentBorderColor: string;
+  agentId: number;
   message: ReactNode;
-  sentiment?: string;
-  additionalIcons?: string[];
+  createdAt: string;
+  agentDetails: {
+    id: number;
+    agents: {
+      id: number;
+      color: string;
+      image_url: string;
+      display_name: string;
+    };
+  };
 }
 
 interface AgentChatProps {
@@ -37,10 +44,11 @@ export function AgentChat({
           {messages.map((msg, index) => (
             <AgentChatLine
               key={index}
-              agentName={msg.agentName}
-              agentImageUrl={msg.agentImageUrl}
-              agentBorderColor={msg.agentBorderColor}
+              agentName={msg.agentDetails.agents.display_name}
+              agentImageUrl={msg.agentDetails.agents.image_url}
+              agentBorderColor={msg.agentDetails.agents.color}
               message={msg.message}
+              createdAt={msg.createdAt}
               sentiment={msg.sentiment}
               showSentiment={showSentiment}
               additionalIcons={msg.additionalIcons}
