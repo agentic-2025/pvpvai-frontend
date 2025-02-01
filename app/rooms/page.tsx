@@ -1,10 +1,8 @@
 "use client";
 
-import { supabase } from "@/lib/config";
+import supabase from "@/lib/config";
 import { RoomTable, RoomWithRelations } from "@/stories/RoomTable";
 import { FC, useEffect, useState } from "react";
-
-// Extend the room type to include the additional data we'll fetch
 
 const RoomsPage: FC = () => {
   const [rooms, setRooms] = useState<RoomWithRelations[]>([]);
@@ -19,12 +17,9 @@ const RoomsPage: FC = () => {
           .select(
             `
             *,
-            // Get participant count from user_rooms
             participants:user_rooms(count),
-            // Get active round
             rounds!inner(
               id,
-              // Get agents for the active round through round_agents
               round_agents!inner(
                 agents(
                   id,

@@ -96,7 +96,6 @@ export function RoomTable({
     }
   );
 
-
   return (
     <div className="space-y-8">
       {showTabs && (
@@ -147,7 +146,7 @@ export function RoomTable({
                       Type
                     </TableHead>
                   )}
-                  <TableHead className="text-xl font-bold text-gray-700 dark:text-gray-200 py-4">
+                  <TableHead className="text-xl font-bold text-gray-700 dark:text-gray-200 py-4 text-center">
                     Participants
                   </TableHead>
                   <TableHead className="text-xl font-bold text-gray-700 dark:text-gray-200 text-center py-4 w-[150px]">

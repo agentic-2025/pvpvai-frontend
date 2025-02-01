@@ -8,16 +8,11 @@ import solanaIcon from "@/stories/assets/crypto/solana-color.svg";
 import solanaFullIcon from "@/stories/assets/crypto/solana-full-color.svg";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import ArbitrumLogo from "../stories/assets/crypto/arbitrum.svg";
-import BaseLogo from "../stories/assets/crypto/base.svg";
 import EthereumLogo from "../stories/assets/crypto/ethereum.png";
-import FlowLogo from "../stories/assets/crypto/flow.svg";
-import SolanaLogo from "../stories/assets/crypto/solana-color.svg";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
-
 
 function getTimerColor(secondsLeft: number): string {
   const minutes = secondsLeft / 60;
@@ -107,6 +102,13 @@ export const chainMetadata: Record<number, ChainMetadata> = {
     icon: solanaIcon.src,
     iconFull: solanaFullIcon.src,
     family: "Solana",
+  },
+  1: {
+    id: 1,
+    name: "Ethereum",
+    icon: EthereumLogo.src,
+    iconFull: EthereumLogo.src,
+    family: "EVM",
   },
 } as const;
 

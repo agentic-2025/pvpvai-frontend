@@ -1,3 +1,4 @@
+"use client";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { chainMetadata, formatTimeLeft } from "@/lib/utils";
 import { RoomWithRelations } from "@/stories/RoomTable";
@@ -19,10 +20,11 @@ export function RoomTableRow({
   room,
   showRoomType,
   style,
+  showToken,
   className = "hover:bg-gray-50 dark:hover:bg-gray-800",
 }: RoomTableRowProps) {
   const timer = formatTimeLeft(
-    new Date(room.round_ends_on || "").getTime() / 1000
+    new Date(room.round_ends_on || "000000").getTime() / 1000
   ); // Ensure the format is correct
   const roomType = roomTypeMapping[room.type_id];
   return (
@@ -36,27 +38,32 @@ export function RoomTableRow({
           {room.name}
         </Link>
       </TableCell>
+
       {showRoomType && (
         <TableCell className="text-lg text-gray-900 dark:text-gray-300">
           {roomType}
         </TableCell>
       )}
+
       <TableCell className="text-lg text-gray-900 dark:text-gray-300 text-center">
         {room.participants}
       </TableCell>
+
       <TableCell className="text-center">
         <div className="flex justify-center">
-          <Image
-            src={chainMetadata[room.chain_id].icon}
-            alt={chainMetadata[room.chain_id].name}
-            className="size-4"
-            width={2000}
-            height={2000}
-          />
+          {room.chain_id && chainMetadata[room.chain_id]?.icon && (
+            <Image
+              src={chainMetadata[room.chain_id]?.icon}
+              alt={chainMetadata[room.chain_id]?.name}
+              className="size-4"
+              width={2000}
+              height={2000}
+            />
+          )}
         </div>
       </TableCell>
-      {/* TODO Below was just to get past lint errors */}
-      {(room.room_config as any)?.room_config?.buySellTokenImage && (
+
+      {showToken ? (
         <TableCell>
           <div className="flex items-center gap-2">
             <Image
@@ -71,10 +78,12 @@ export function RoomTableRow({
             </span>
           </div>
         </TableCell>
-      )}
+      ) : null}
+
       <TableCell className="text-lg text-center">
         <span style={{ color: timer.color }}>{timer.text}</span>
       </TableCell>
+
       <TableCell className="pr-6">
         <div className="flex -space-x-2">
           {room.agents?.map((agent) => (
