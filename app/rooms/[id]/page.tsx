@@ -4,8 +4,10 @@ import supabase from "@/lib/config";
 import { AgentChat } from "@/stories/AgentChat";
 import { BuySellGameAvatarInteraction } from "@/stories/BuySellGameAvatarInteraction";
 import { RoomWithRelations } from "@/stories/RoomTable";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
+import { motion } from "framer-motion";
+import { Input } from "@/components/ui/input";
 
 export default function RoomDetailPage() {
   const params = useParams();
@@ -13,6 +15,19 @@ export default function RoomDetailPage() {
   const [roomData, setRoomData] = useState<RoomWithRelations | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
+  const [userMessages, setUserMessages] = useState<any[]>([]);
+  const [wsConnection, setWsConnection] = useState<WebSocket | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [lastMessageTimestamp, setLastMessageTimestamp] = useState<
+    number | null
+  >(null);
+
+  // Auto-scroll when new messages arrive
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+  }, [userMessages]);
 
   useEffect(() => {
     const loadRoomDetails = async () => {
@@ -43,6 +58,9 @@ export default function RoomDetailPage() {
               created_at,
               round_agent_messages!inner(
                 id, agent_id, message, created_at
+              ),
+              round_user_messages!inner(
+                id, user_id, message, created_at
               )
             )
           `
@@ -78,7 +96,7 @@ export default function RoomDetailPage() {
               image: ra.agents.image_url,
               color: ra.agents.color,
             })) ?? [],
-          roundNumber: totalRounds, // The count of rounds, not round ID
+          roundNumber: totalRounds,
           agentMessages:
             roomData.rounds?.[0]?.round_agent_messages?.map((msg: any) => ({
               agentId: msg.agent_id,
@@ -92,6 +110,15 @@ export default function RoomDetailPage() {
         };
 
         setRoomData(transformedRoom);
+
+        // Set user messages
+        setUserMessages(
+          roomData.rounds?.[0]?.round_user_messages?.map((msg: any) => ({
+            userId: msg.user_id,
+            message: normalizeMessage(msg),
+            createdAt: msg.created_at,
+          })) ?? []
+        );
       } catch (error) {
         console.error("Error loading room details:", error);
       } finally {
@@ -102,41 +129,44 @@ export default function RoomDetailPage() {
     loadRoomDetails();
   }, [id]);
 
-  // timer
+  // WebSocket connection for real-time user messages
   useEffect(() => {
-    if (!roomData?.round_ends_on) {
-      setTimeLeft("N/A");
-      return;
-    }
+    const initWebSocket = () => {
+      const ws = new WebSocket("ws://localhost:3000/ws");
 
-    const updateTimer = () => {
-      const roundEndTime = roomData.round_ends_on
-        ? new Date(roomData.round_ends_on).getTime()
-        : 0;
-      const currentTime = Date.now();
-      const timeDiff = roundEndTime - currentTime;
+      ws.onopen = () => {
+        console.log("WebSocket connected");
+        ws.send(JSON.stringify({ type: "subscribe_room", roomId: id }));
+      };
 
-      if (timeDiff <= 0) {
-        setTimeLeft("00:00:00");
-        return;
-      }
+      ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        console.log("Received message:", message);
+        const timestamp = Date.now();
+        setLastMessageTimestamp(timestamp);
+        setUserMessages((prev) => [
+          { ...message, _timestamp: timestamp },
+          ...prev,
+        ]);
+      };
 
-      const hours = Math.floor(timeDiff / (1000 * 60 * 60));
-      const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+      ws.onerror = (error) => console.error("WebSocket error:", error);
+      ws.onclose = () => {
+        console.log("WebSocket disconnected");
+        setTimeout(initWebSocket, 5000);
+      };
 
-      setTimeLeft(
-        `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
-          2,
-          "0"
-        )}:${String(seconds).padStart(2, "0")}`
-      );
+      setWsConnection(ws);
     };
 
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
-    return () => clearInterval(interval);
-  }, [roomData?.round_ends_on]);
+    initWebSocket();
+
+    return () => {
+      if (wsConnection) {
+        wsConnection.close();
+      }
+    };
+  }, [id]);
 
   if (loading) {
     return <Loader />;
@@ -149,8 +179,6 @@ export default function RoomDetailPage() {
       </div>
     );
   }
-
-  console.log(roomData.agentMessages);
 
   return (
     <div className="flex items-center justify-center h-screen">
@@ -214,11 +242,31 @@ export default function RoomDetailPage() {
               </div>
             </div>
 
-            {/* Stream Chat Card */}
-            <div className="flex-1 bg-card rounded-lg p-4">
-              <div className="h-full bg-muted rounded-lg flex items-center justify-center text-muted-foreground text-lg">
-                Stream Chat
+            {/* User Messages */}
+            <div className="flex flex-col bg-card rounded-lg p-4 overflow-y-auto">
+              <div
+                className="flex-1 bg-muted rounded-lg p-3 flex flex-col overflow-y-auto"
+                ref={scrollContainerRef}
+              >
+                {userMessages.length === 0 ? (
+                  <span className="text-gray-400">No user messages yet</span>
+                ) : (
+                  userMessages.map((msg, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                    >
+                      <p className="text-white">{msg.message}</p>
+                    </motion.div>
+                  ))
+                )}
               </div>
+              <Input
+                type="text"
+                placeholder="Type a message..."
+                className="p-2 bg-gray-800 text-white rounded-lg mt-4"
+              />
             </div>
           </div>
         </div>
