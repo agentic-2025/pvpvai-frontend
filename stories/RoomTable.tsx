@@ -13,7 +13,12 @@ import {
 } from "@/components/ui/table";
 import { Tables } from "@/lib/database.types";
 
-export type RoomWithRelations = Tables<"rooms"> & {
+export type Agent = Tables<"agents">;
+export type Room = Tables<"rooms">;
+export type RoomAgent = Tables<"room_agents">;
+export type RoundAgentMessage = Tables<"round_agent_messages">;
+
+export interface RoomWithRelations extends Room {
   participants: number;
   agents: {
     id: number;
@@ -21,7 +26,19 @@ export type RoomWithRelations = Tables<"rooms"> & {
     image: string | null;
     color: string;
   }[];
-};
+  roundNumber: number;
+  agentMessages: {
+    agentId: number;
+    message: string;
+    createdAt: string;
+    agentDetails: {
+      id: number;
+      displayName: string;
+      image: string | null;
+      color: string;
+    } | null;
+  }[];
+}
 
 export type RoomTypeName =
   | "Buy / Hold / Sell"

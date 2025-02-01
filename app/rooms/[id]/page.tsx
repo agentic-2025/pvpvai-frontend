@@ -5,8 +5,10 @@ import { AgentChat } from "@/stories/AgentChat";
 import { BuySellGameAvatarInteraction } from "@/stories/BuySellGameAvatarInteraction";
 import { RoomWithRelations } from "@/stories/RoomTable";
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 
-export default function RoomDetailPage({ params }: { params: { id: string } }) {
+export default function RoomDetailPage() {
+  const params = useParams();
   const id = params.id;
   const [roomData, setRoomData] = useState<RoomWithRelations | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,7 +84,10 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
               agentId: msg.agent_id,
               message: normalizeMessage(msg),
               createdAt: msg.created_at,
-              agentDetails: roomData.room_agents?.find(ra => ra.agents.id === msg.agent_id) || null,
+              agentDetails:
+                roomData.room_agents?.find(
+                  (ra) => ra.agents.id === msg.agent_id
+                ) || null,
             })) ?? [],
         };
 
@@ -128,8 +133,8 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
       );
     };
 
-    updateTimer(); 
-    const interval = setInterval(updateTimer, 1000); 
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
   }, [roomData?.round_ends_on]);
 
@@ -145,7 +150,7 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
     );
   }
 
-  console.log(roomData.agentMessages)
+  console.log(roomData.agentMessages);
 
   return (
     <div className="flex items-center justify-center h-screen">
@@ -186,7 +191,11 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
 
             {/* Agent Chat */}
             <div className="flex-1 bg-card rounded-lg overflow-hidden">
-              <AgentChat className="h-full" showHeader={false} messages={roomData.agentMessages} />
+              <AgentChat
+                className="h-full"
+                showHeader={false}
+                messages={roomData.agentMessages}
+              />
             </div>
           </div>
 
