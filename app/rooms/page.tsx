@@ -1,5 +1,6 @@
 "use client";
 
+import Loader from "@/components/loader";
 import supabase from "@/lib/config";
 import { RoomTable, RoomWithRelations } from "@/stories/RoomTable";
 import { FC, useEffect, useState } from "react";
@@ -63,7 +64,7 @@ const RoomsPage: FC = () => {
   }, []);
 
   if (loading) {
-    return <div>Loading rooms...</div>;
+    return <Loader />;
   }
 
   return (
