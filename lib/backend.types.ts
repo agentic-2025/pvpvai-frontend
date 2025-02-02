@@ -1,24 +1,17 @@
-// TODO, these are copied from the backend, but we should set up a monorepo or shared library later
-/*
-    WEBSOCKET MESSAGE TYPES
-*/
-export type WSMessageInputType =
-  | "subscribe_room"
-  | "unsubscribe_room"
-  | "public_chat"
-  | "heartbeat"
-  | "system_notification";
-
-export type WSMessageOutputType =
-  | "system_notification"
-  | "public_chat"
-  | "heartbeat"
-  | "ai_chat"
-  | "gm_action"
-  | "pvp_action";
+export enum WsMessageType {
+  SUBSCRIBE_ROOM = "subscribe_room",
+  UNSUBSCRIBE_ROOM = "unsubscribe_room",
+  PUBLIC_CHAT = "public_chat",
+  HEARTBEAT = "heartbeat",
+  GM_ACTION = "gm_action",
+  SYSTEM_NOTIFICATION = "system_notification",
+  AI_CHAT = "ai_chat",
+  PVP_ACTION = "pvp_action",
+  OBSERVATION = "observation",
+}
 
 export interface WSMessageInput {
-  type: WSMessageInputType;
+  type: WsMessageType;
   timestamp?: number;
   signature?: string;
   author?: number;
@@ -27,18 +20,21 @@ export interface WSMessageInput {
     roomId?: number;
     roundId?: number;
     text?: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    data?: any;
   };
 }
 
 export interface WSMessageOutput {
-  type: WSMessageOutputType;
+  type: WsMessageType;
   timestamp: number;
   signature: string;
   content:
     | PublicChatContent
     | AIChatContent
     | GMMessageContent
-    | PVPMessageContent;
+    | PVPMessageContent
+    | SystemNotificationContent;
   error?: string;
 }
 
@@ -51,13 +47,49 @@ export interface PublicChatContent {
   timestamp: number;
 }
 
+export interface WalletBalanceData {
+  nativeBalance: bigint;
+  tokenBalance: bigint;
+  nativeValue: number;
+  usdValue: number;
+  percentChangeNative: number;
+  percentChangeUsd: number;
+}
+export interface PriceData {
+  source: string;
+  tokenPriceNative: number;
+  tokenPriceUsd: number;
+  nativePriceUsd: number;
+}
+export enum ObservationType {
+  WALLET_BALANCES = "wallet-balances",
+  PRICE_DATA = "price-data",
+  GAME_EVENT = "game-event",
+}
+
+export interface ExternalDataContent {
+  account: string;
+  timestamp: number;
+  signature: string;
+  message_type: ObservationType;
+  content: any;
+}
+
 export interface SystemNotificationContent {
   text: string;
   error: boolean;
   originalMessage?: any;
+  roomId?: number;
+  roundId?: number;
+}
+
+export interface AiContextUpdate {
+  source_type: "news" | "social media" | "onchain" | "other";
+  data: JSON;
 }
 
 export interface AIChatContent {
+  message_id: number;
   actor: string; // The blockchain address of the AI agent who sent the message
   sent: number; // UTC timestamp in milliseconds when message was sent to backend
   originalContent?: {
@@ -74,6 +106,7 @@ export interface AIChatContent {
 }
 
 export interface PVPMessageContent {
+  message_id: number;
   txHash: string;
   roomId: number;
   roundId: number;
@@ -85,6 +118,7 @@ export interface PVPMessageContent {
 }
 
 export interface GMMessageContent {
+  message_id: number;
   gm_id: string; //Address of the GM taking the action TODO change to addresslike
   content: {
     text: string;
@@ -92,7 +126,3 @@ export interface GMMessageContent {
   targets: string[]; // If the GM is taking action against a specific agent, like kicking them or forcing a decision, the targets will appear here.
   timestamp: number;
 }
-
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface HeartbeatContent {}
-

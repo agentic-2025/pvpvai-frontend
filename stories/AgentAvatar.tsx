@@ -50,7 +50,7 @@ export function AgentAvatar({
       <AvatarFallback
         className={cn(styles.text, "rounded-full text-white bg-gray-700")}
       >
-        {name.slice(0, 2).toUpperCase()}
+        {name?.slice(0, 2)?.toUpperCase()}
       </AvatarFallback>
     </Avatar>
   );

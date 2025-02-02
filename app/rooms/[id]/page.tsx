@@ -2,6 +2,8 @@
 
 import Loader from "@/components/loader";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { WSMessageOutput, WsMessageType } from "@/lib/backend.types";
 import supabase from "@/lib/config";
 import { AgentChat } from "@/stories/AgentChat";
 import { BuySellGameAvatarInteraction } from "@/stories/BuySellGameAvatarInteraction";
@@ -9,30 +11,30 @@ import { RoomWithRelations } from "@/stories/RoomTable";
 import { motion } from "framer-motion";
 import { useParams } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import useWebSocket, { ReadyState } from "react-use-websocket";
 
 export default function RoomDetailPage() {
   const params = useParams();
   const id = params.id;
+  const roomId = parseInt(id);
+
+  // State for room details (common data)
   const [roomData, setRoomData] = useState<RoomWithRelations | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
-  // Single state to store all messages (API + socket)
   const [messages, setMessages] = useState<any[]>([]);
+  const [agentMessages, setAgentMessages] = useState<any[]>([]);
+
+  // States for round navigation
+  const [roundList, setRoundList] = useState<any[]>([]);
+  const [currentRoundIndex, setCurrentRoundIndex] = useState<number>(0);
+
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  // Refs for WebSocket management and cleanup
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isMountedRef = useRef(true);
-
-  // Dummy current user id (replace with your auth logic)
   const currentUserId = 1;
+  const { toast } = useToast();
+  const maxRetries = 5;
 
-  /**
-   * normalizeMessage:
-   *   - If msg.content.text exists, return that.
-   *   - Otherwise, fallback to msg.message.text or msg.message.
-   */
+  // Normalize message text from different formats
   const normalizeMessage = (msg: any) => {
     if (msg.content && typeof msg.content.text === "string") {
       return msg.content.text;
@@ -43,7 +45,7 @@ export default function RoomDetailPage() {
     return msg.message || "";
   };
 
-  // ensuring that the newest messages are visible at the bottom.
+  // Scroll to the bottom when messages update
   useLayoutEffect(() => {
     const container = scrollContainerRef.current;
     if (container) {
@@ -54,176 +56,350 @@ export default function RoomDetailPage() {
     }
   }, [messages]);
 
-  useEffect(() => {
-    const loadRoomDetails = async () => {
-      try {
-        const { data: roomData, error } = await supabase
-          .from("rooms")
-          .select(
-            `
-            id, name, type_id, image_url, color, active, chain_family, contract_address, round_time, round_ends_on, creator_id,
-            game_master_id, game_master_action_log, pvp_action_log, room_config, created_at, updated_at, chain_id,
-            participants:user_rooms(count),
-            room_agents(
-              id,
-              agents(
-                id,
-                display_name,
-                image_url,
-                color
-              )
-            ),
-            users:user_rooms(count),
-            rounds(
-              id,
-              created_at,
-              round_agent_messages(
-                id, agent_id, message, created_at
-              ),
-              round_user_messages(
-                id, user_id, message, created_at
-              )
-            )
-            `
-          )
-          .eq("id", parseInt(id))
-          .order("created_at", { referencedTable: "rounds", ascending: false })
-          .single();
-        if (error) throw error;
+  // --- API FETCHING FUNCTIONS ---
 
-        // (Optional) Fetch round count if needed
-        const { data: roundCountData, error: roundCountError } = await supabase
-          .from("rounds")
-          .select("id")
-          .eq("room_id", parseInt(id));
-        if (roundCountError) throw roundCountError;
-        const totalRounds = roundCountData?.length ?? 0;
+  // 1. Fetch room details (without round-specific data)
+  const fetchRoomDetails = async (roomId: number) => {
+    const { data, error } = await supabase
+      .from("rooms")
+      .select(
+        `
+        id,
+        name,
+        type_id,
+        image_url,
+        color,
+        active,
+        chain_family,
+        contract_address,
+        round_time,
+        round_ends_on,
+        creator_id,
+        game_master_id,
+        game_master_action_log,
+        pvp_action_log,
+        room_config,
+        created_at,
+        updated_at,
+        chain_id,
+        participants:user_rooms(count)
+      `
+      )
+      .eq("id", roomId)
+      .single();
+    if (error) throw error;
+    return data;
+  };
 
-        // Transform room data
-        const transformedRoom: RoomWithRelations = {
-          ...roomData,
-          participants: roomData.participants?.[0]?.count ?? 0,
-          agents:
-            roomData.room_agents?.map((ra: any) => ({
-              id: ra.agents.id,
-              displayName: ra.agents.display_name,
-              image: ra.agents.image_url,
-              color: ra.agents.color,
-            })) ?? [],
-          roundNumber: totalRounds,
-          agentMessages:
-            roomData.rounds?.[0]?.round_agent_messages?.map((msg: any) => ({
-              agentId: msg.agent_id,
-              message: normalizeMessage(msg),
-              createdAt: msg.created_at,
-              agentDetails:
-                roomData.room_agents?.find(
-                  (ra: any) => ra.agents.id === msg.agent_id
-                ) || null,
-            })) ?? [],
+  // 2. Fetch the list of rounds (ids and created_at) for the room
+  const fetchRoundList = async (roomId: number) => {
+    const { data, error } = await supabase
+      .from("rounds")
+      .select("id, created_at")
+      .eq("room_id", roomId)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return data;
+  };
+
+  // 3. Fetch details for a specific round (by round id)
+  const fetchRoundDetails = async (roundId: number) => {
+    const { data, error } = await supabase
+      .from("rounds")
+      .select(
+        `
+        *,
+        round_agent_messages(*),
+        round_agents(*),
+        round_observations(*),
+        round_user_messages(*)
+      `
+      )
+      .eq("id", roundId)
+      .single();
+    if (error) throw error;
+    return data;
+  };
+
+  // 4. Load round-specific data and update roomData and messages
+  const loadRoundData = async (roundId: number) => {
+    try {
+      const round = await fetchRoundDetails(roundId);
+
+      // Process agents solely from round data (ignore room.room_agents)
+      const roundAgents =
+        round?.round_agents?.map((ra: any) => {
+          return {
+            id: ra.agent_id || ra.agents?.id,
+            displayName: ra.display_name || ra.agents?.display_name,
+            image: ra.image_url || ra.agents?.image_url,
+            color: ra.color || ra.agents?.color,
+          };
+        }) ?? [];
+
+      // Process agent messages from round_agent_messages
+      const processedAgentMsgs =
+        round?.round_agent_messages?.map((msg: any) => ({
+          agentId: msg.agent_id,
+          message: normalizeMessage(msg),
+          createdAt: msg.created_at,
+          agentDetails:
+            roundAgents.find((agent: any) => agent.id === msg.agent_id) || null,
+        })) ?? [];
+
+      // Process public user messages from round_user_messages
+      const processedUserMsgs =
+        round?.round_user_messages?.map((msg: any) => ({
+          userId: msg.user_id,
+          message: normalizeMessage(msg),
+          createdAt: msg.created_at,
+          _timestamp: msg.created_at
+            ? new Date(msg.created_at).getTime()
+            : Date.now(),
+          source: "api",
+          content: msg.content || {},
+          type: WsMessageType.PUBLIC_CHAT,
+        })) ?? [];
+      processedUserMsgs.sort((a, b) => a._timestamp - b._timestamp);
+
+      // Update roomData with round-specific data.
+      // Note: We keep room details (like name, participants) as previously fetched.
+      setRoomData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          agents: roundAgents, // Use agents exclusively from this round.
+          roundNumber: roundList.length, // Total rounds count
+          agentMessages: processedAgentMsgs,
         };
+      });
 
-        setRoomData(transformedRoom);
+      // Update chat messages state
+      setMessages(processedUserMsgs);
+      setAgentMessages(
+        round?.round_agent_messages?.map((msg: any) => ({
+          agentId: msg.agent_id,
+          message: normalizeMessage(msg),
+          createdAt: msg.created_at,
+          _timestamp: msg.created_at
+            ? new Date(msg.created_at).getTime()
+            : Date.now(),
+          content: msg.content || {},
+          type: WsMessageType.AGENT_CHAT,
+        })) ?? []
+      );
+    } catch (error) {
+      console.error("Error loading round details:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load round details.",
+      });
+    }
+  };
 
-        // Process API messages from the first round.
-        const apiMsgs =
-          roomData.rounds?.[0]?.round_user_messages?.map((msg: any) => ({
-            userId: msg.user_id,
-            message: normalizeMessage(msg),
-            createdAt: msg.created_at,
-            _timestamp: msg.created_at
-              ? new Date(msg.created_at).getTime()
-              : msg.content?.timestamp || Date.now(),
-            source: "api",
-            // Retain the entire content so that we can show additional details.
-            content: msg.content || {},
-          })) ?? [];
-        apiMsgs.sort((a, b) => a._timestamp - b._timestamp);
-        setMessages(apiMsgs);
+  // --- Initial Loading (Room & Round List) ---
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Fetch and set room details
+        const room = await fetchRoomDetails(roomId);
+        const totalParticipants = room.participants?.[0]?.count ?? 0;
+        setRoomData({ ...room, participants: totalParticipants });
+
+        // Fetch and store round list
+        const roundsData = await fetchRoundList(roomId);
+        setRoundList(roundsData);
+
+        // If there are rounds, load the latest round (index 0)
+        if (roundsData.length > 0) {
+          setCurrentRoundIndex(0);
+          await loadRoundData(roundsData[0].id);
+        }
       } catch (error) {
-        console.error("Error loading room details:", error);
+        console.error("Error loading room data:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load room data.",
+        });
       } finally {
         setLoading(false);
       }
     };
 
-    loadRoomDetails();
-  }, [id]);
+    loadData();
+  }, [roomId]);
 
-  // WebSocket connection and handling new messages
-  const connectWebSocket = () => {
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-    if (!backendUrl) {
-      throw new Error("Missing NEXT_PUBLIC_BACKEND_URL");
+  // --- Round Navigation Handlers ---
+  const handlePrevRound = async () => {
+    // "Prev" means moving to an older round (i.e. a higher index)
+    if (currentRoundIndex < roundList.length - 1) {
+      const newIndex = currentRoundIndex + 1;
+      setCurrentRoundIndex(newIndex);
+      await loadRoundData(roundList[newIndex].id);
     }
-    const wsUrl = backendUrl.replace(/^http/, "ws") + "/ws";
+  };
 
-    try {
-      const ws = new WebSocket(wsUrl);
-      wsRef.current = ws;
+  const handleNextRound = async () => {
+    // "Next" means moving to a newer round (i.e. a lower index)
+    if (currentRoundIndex > 0) {
+      const newIndex = currentRoundIndex - 1;
+      setCurrentRoundIndex(newIndex);
+      await loadRoundData(roundList[newIndex].id);
+    }
+  };
 
-      ws.onopen = () => {
+  // --- WebSocket Logic (Unchanged) ---
+  const socketUrl = `${process.env.NEXT_PUBLIC_BACKEND_WS_URL}`;
+  const { sendMessage, readyState, getWebSocket } =
+    useWebSocket<WSMessageOutput>(socketUrl, {
+      shouldReconnect: () => {
+        const ws = getWebSocket();
+        const retries = (ws as any)?.retries || 0;
+        if (retries >= maxRetries) {
+          toast({
+            variant: "destructive",
+            title: "Connection Error",
+            description:
+              "Failed to connect after multiple attempts. Please refresh the page.",
+            duration: Infinity,
+          });
+          return false;
+        }
+        return true;
+      },
+      reconnectInterval: 5000,
+      reconnectAttempts: maxRetries,
+      onOpen: () => {
         console.log("WebSocket connected");
-        ws.send(
+        const ws = getWebSocket();
+        (ws as any).retries = 0;
+        sendMessage(
           JSON.stringify({
-            type: "subscribe_room",
+            type: WsMessageType.SUBSCRIBE_ROOM,
             author: currentUserId,
-            timestamp: Date.now(),
-            content: { roomId: Number(id) },
+            timeStamp: Date.now(),
+            content: { roomId },
           })
         );
-      };
-
-      ws.onmessage = (event) => {
+        toast({
+          title: "Connected",
+          description: "Successfully connected to the chat server",
+        });
+      },
+      onMessage: (event) => {
+        console.log("Received message:", event.data);
+        let data;
         try {
-          const parsedMessage = JSON.parse(event.data);
-          console.log("Received message:", parsedMessage);
-          const newMsg = {
-            ...parsedMessage,
-            message: normalizeMessage(parsedMessage),
-            _timestamp: parsedMessage.content?.timestamp || Date.now(),
-            source: "socket",
-          };
+          data =
+            typeof event.data === "string"
+              ? JSON.parse(event.data)
+              : event.data;
+        } catch (err) {
+          console.error("Failed to parse websocket message", err);
+          return;
+        }
+
+        if (data.type === WsMessageType.PUBLIC_CHAT) {
           setMessages((prev) => {
-            const updated = [...prev, newMsg];
+            const newMessageId = data.content?.message_id;
+            const alreadyExists = newMessageId
+              ? prev.some((msg) => msg.content?.message_id === newMessageId)
+              : false;
+            if (alreadyExists) return prev;
+            const updated = [
+              ...prev,
+              {
+                ...data,
+                _timestamp: Date.now(),
+                message: normalizeMessage(data),
+              },
+            ];
             return updated.length > 50
               ? updated.slice(updated.length - 50)
               : updated;
           });
-        } catch (err) {
-          console.error("Failed to parse websocket message", err);
         }
-      };
-
-      ws.onerror = (error) => {
-        console.error("WebSocket error:", error);
-      };
-
-      ws.onclose = () => {
+        if (
+          data.type === WsMessageType.GM_ACTION ||
+          data.type === WsMessageType.AI_CHAT ||
+          data.type === WsMessageType.PVP_ACTION ||
+          data.type === WsMessageType.AGENT_CHAT
+        ) {
+          setAgentMessages((prev) => {
+            const newMessageId = data.content?.message_id;
+            const alreadyExists = newMessageId
+              ? prev.some((msg) => msg.content?.message_id === newMessageId)
+              : false;
+            if (alreadyExists) return prev;
+            return [
+              ...prev,
+              {
+                ...data,
+                _timestamp: Date.now(),
+                message: normalizeMessage(data),
+              },
+            ];
+          });
+        }
+        if (data.type === WsMessageType.SYSTEM_NOTIFICATION) {
+          if (data.content.error) {
+            toast({
+              variant: "destructive",
+              title: "Encountered an error",
+              description: data.content.text,
+            });
+            setMessages((prev) => {
+              const updated = [
+                ...prev,
+                {
+                  ...data,
+                  _timestamp: Date.now(),
+                  message: normalizeMessage(data),
+                },
+              ];
+              return updated.length > 50
+                ? updated.slice(updated.length - 50)
+                : updated;
+            });
+          }
+        }
+      },
+      onClose: () => {
         console.log("WebSocket disconnected");
-        if (isMountedRef.current) {
-          console.log("Attempting to reconnect in 5 seconds...");
-          reconnectTimeoutRef.current = setTimeout(connectWebSocket, 5000);
-        }
-      };
-    } catch (err) {
-      console.error("WebSocket connection failed:", err);
-      if (isMountedRef.current) {
-        reconnectTimeoutRef.current = setTimeout(connectWebSocket, 5000);
-      }
-    }
-  };
+        const ws = getWebSocket();
+        (ws as any).retries = ((ws as any).retries || 0) + 1;
+        toast({
+          variant: "destructive",
+          title: "Disconnected",
+          description:
+            "Lost connection to chat server. Attempting to reconnect...",
+        });
+      },
+      onError: () => {
+        console.error("WebSocket error");
+        toast({
+          variant: "destructive",
+          title: "Connection Error",
+          description: "Failed to connect to chat server. Retrying...",
+        });
+      },
+    });
 
-  useEffect(() => {
-    isMountedRef.current = true;
-    connectWebSocket();
-    return () => {
-      isMountedRef.current = false;
-      if (wsRef.current) wsRef.current.close();
-      if (reconnectTimeoutRef.current)
-        clearTimeout(reconnectTimeoutRef.current);
-    };
-  }, [id]);
+  const connectionStatus = {
+    [ReadyState.CONNECTING]: "Connecting",
+    [ReadyState.OPEN]: "Open",
+    [ReadyState.CLOSING]: "Closing",
+    [ReadyState.CLOSED]: "Closed",
+    [ReadyState.UNINSTANTIATED]: "Uninstantiated",
+  }[readyState];
+  console.log("WebSocket status:", connectionStatus);
+
+  // Filter for public messages to display
+  const publicMessages = messages.filter(
+    (msg) => msg.type === WsMessageType.PUBLIC_CHAT
+  );
 
   if (loading) return <Loader />;
   if (!roomData)
@@ -237,12 +413,12 @@ export default function RoomDetailPage() {
     <div className="flex items-center justify-center h-screen">
       <div className="max-w-screen-2xl mx-auto p-4 bg-secondary/50 rounded-xl">
         <div className="flex gap-6 h-[calc(100vh-4rem)]">
-          {/* Left Section */}
+          {/* Left Section: Room Info, Agents, and Agent Chat */}
           <div className="w-[65%] flex flex-col gap-6">
             <h1 className="text-4xl font-bold truncate text-center">
               {roomData.name}
             </h1>
-            {/* Agents Display */}
+            {/* Agents Display (from current round) */}
             <div className="h-[60%] overflow-y-auto bg-[#1c1917] rounded-lg p-3">
               <div className="bg-[#262626] flex items-center justify-center h-full rounded-md">
                 <div className="flex flex-wrap justify-center items-center gap-10">
@@ -262,61 +438,74 @@ export default function RoomDetailPage() {
                     ))
                   ) : (
                     <span className="text-gray-400">
-                      No agents in this round
+                      No agents available in this round
                     </span>
                   )}
                 </div>
               </div>
             </div>
             {/* Agent Chat */}
-            <div className="flex-1 bg-card rounded-lg overflow-hidden">
+            <div className="flex-1 bg-card rounded-lg overflow-hidden w-full">
               <AgentChat
                 className="h-full"
                 showHeader={false}
-                messages={roomData.agentMessages}
+                messages={agentMessages}
               />
             </div>
           </div>
-          {/* Right Section */}
+          {/* Right Section: Room Details, Round Navigation, and User Chat */}
           <div className="w-[35%] flex flex-col gap-6">
-            {/* Room Details */}
-            <div className="h-[20%] bg-card rounded-lg p-4">
-              <div className="h-full bg-muted rounded-lg flex flex-col items-center justify-center text-muted-foreground text-lg gap-y-1">
-                <span>Room ID: {roomData.id}</span>
-                <span className="text-3xl font-bold bg-[#E97B17] text-white py-3 px-4">
-                  {timeLeft}
+            {/* Room Details and Round Navigation */}
+            <div className="h-[20%] bg-card rounded-lg p-4 flex flex-col items-center justify-center gap-y-2">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={handlePrevRound}
+                  disabled={currentRoundIndex >= roundList.length - 1}
+                  className="px-2 py-1 bg-gray-700 text-white rounded disabled:opacity-50"
+                >
+                  Prev
+                </button>
+                <span>
+                  Round {currentRoundIndex + 1} / {roundList.length}
                 </span>
-                <span className="text-lg font-semibold">
-                  {roomData.participants} Participants
-                </span>
+                <button
+                  onClick={handleNextRound}
+                  disabled={currentRoundIndex <= 0}
+                  className="px-2 py-1 bg-gray-700 text-white rounded disabled:opacity-50"
+                >
+                  Next
+                </button>
               </div>
+              <span>Room ID: {roomData.id}</span>
+              <span className="text-3xl font-bold bg-[#E97B17] text-white py-3 px-4">
+                {timeLeft}
+              </span>
+              <span className="text-lg font-semibold">
+                {roomData.participants} Participants
+              </span>
             </div>
             {/* User Messages */}
-            <div className="flex flex-col bg-card rounded-lg p-4 overflow-y-auto">
+            <div className="flex flex-col bg-card rounded-lg p-4 overflow-y-auto h-full">
               <div
                 className="flex-1 bg-muted rounded-lg p-3 flex flex-col overflow-y-auto"
                 ref={scrollContainerRef}
               >
-                {messages.length === 0 ? (
+                {publicMessages.length === 0 ? (
                   <span className="text-gray-400">No user messages yet</span>
                 ) : (
-                  messages.map((msg, index) => (
+                  publicMessages.map((msg, index) => (
                     <motion.div
                       key={index}
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       className="mb-2"
                     >
-                      {/* Show additional details */}
                       <div className="flex justify-between items-center">
                         <div className="flex items-center">
                           <div className="w-8 h-8 bg-gray-400 rounded-full flex justify-center items-center">
                             {msg.content?.author || msg.userId || "U"}
                           </div>
                           <div className="ml-2">
-                            {/* <span className="text-white">
-                              {msg.content?.author || msg.userId || "Unknown"}: 
-                            </span> */}
                             <p className="text-white">{msg.message}</p>
                           </div>
                         </div>
@@ -336,7 +525,7 @@ export default function RoomDetailPage() {
               <Input
                 type="text"
                 placeholder="Type a message..."
-                className="p-2 bg-gray-800 text-white rounded-lg mt-4"
+                className="p-2 bg-gray-800 text-white rounded-lg mt-auto"
               />
             </div>
           </div>

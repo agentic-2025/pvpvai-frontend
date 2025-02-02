@@ -115,11 +115,11 @@ export function AgentChatLine({
                 <TooltipTrigger asChild>
                   <div
                     className={cn(
-                      "text-sm",
+                      "text-sm w-full overflow-x-hidden",
                       actionColor.text
                         ? `text-[${actionColor.text}]`
                         : "text-gray-200",
-                      "line-clamp-5 break-words"
+                      "line-clamp-5 break-all"
                     )}
                   >
                     {renderedMessage}
