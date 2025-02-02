@@ -1,6 +1,8 @@
 "use client";
 import Loader from "@/components/loader";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { WSMessageOutput, WsMessageType } from "@/lib/backend.types";
 import supabase from "@/lib/config";
 import { AgentChat } from "@/stories/AgentChat";
 import { BuySellGameAvatarInteraction } from "@/stories/BuySellGameAvatarInteraction";
@@ -8,6 +10,7 @@ import { RoomWithRelations } from "@/stories/RoomTable";
 import { motion } from "framer-motion";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import useWebSocket, { ReadyState } from "react-use-websocket";
 
 export default function RoomDetailPage() {
   const params = useParams();
@@ -16,11 +19,109 @@ export default function RoomDetailPage() {
   const [loading, setLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
   const [userMessages, setUserMessages] = useState<any[]>([]);
-  const [wsConnection, setWsConnection] = useState<WebSocket | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [lastMessageTimestamp, setLastMessageTimestamp] = useState<
-    number | null
-  >(null);
+  const { toast } = useToast();
+  const maxRetries = 5;
+
+  // WebSocket setup
+  const socketUrl = `${process.env.NEXT_PUBLIC_BACKEND_WS_URL}`;
+
+  const { sendMessage, lastMessage, readyState, getWebSocket } =
+    useWebSocket<WSMessageOutput>(socketUrl, {
+      shouldReconnect: (/*closeEvent*/) => {
+        // Only attempt to reconnect if we haven't reached max retries
+        const ws = getWebSocket();
+        const retries = (ws as any)?.retries || 0;
+        if (retries >= maxRetries) {
+          toast({
+            variant: "destructive",
+            title: "Connection Error",
+            description:
+              "Failed to connect after multiple attempts. Please refresh the page.",
+            duration: Infinity,
+          });
+          return false;
+        }
+        return true;
+      },
+      reconnectInterval: 5000,
+      reconnectAttempts: maxRetries,
+      onOpen: () => {
+        console.log("WebSocket connected");
+        // Reset retry count on successful connection
+        const ws = getWebSocket();
+        (ws as any).retries = 0;
+
+        // Subscribe to room
+        sendMessage(
+          JSON.stringify({
+            type: WsMessageType.SUBSCRIBE_ROOM,
+            author: 3,
+            timeStamp: Date.now(),
+            content: {
+              roomId: id,
+            },
+          })
+        );
+
+        toast({
+          title: "Connected",
+          description: "Successfully connected to the chat server",
+        });
+      },
+      onMessage: (event) => {
+        console.log("Received message:", event.data);
+        if (event.data.type === WsMessageType.PUBLIC_CHAT) {
+          setUserMessages((prev) => [
+            { ...event.data, _timestamp: Date.now() },
+            ...prev,
+          ]);
+        }
+        if (event.data.type === WsMessageType.AI_CHAT) {
+          console.log(
+            "Received AI chat message, routing to user messages for now"
+          );
+          setUserMessages((prev) => [
+            { ...event.data, _timestamp: Date.now() },
+            ...prev,
+          ]);
+        }
+        if (event.data.type === WsMessageType.SYSTEM_NOTIFICATION) {
+          if (event.data.content.error) {
+            toast({
+              variant: "destructive",
+              title: "Encountered an error",
+              description: event.data.content.text,
+            });
+            setUserMessages((prev) => [
+              { ...event.data, _timestamp: Date.now() },
+              ...prev,
+            ]);
+          }
+        }
+      },
+      onClose: () => {
+        console.log("WebSocket disconnected");
+        // Increment retry count
+        const ws = getWebSocket();
+        (ws as any).retries = ((ws as any).retries || 0) + 1;
+
+        toast({
+          variant: "destructive",
+          title: "Disconnected",
+          description:
+            "Lost connection to chat server. Attempting to reconnect...",
+        });
+      },
+      onError: () => {
+        console.error("WebSocket error");
+        toast({
+          variant: "destructive",
+          title: "Connection Error",
+          description: "Failed to connect to chat server. Retrying...",
+        });
+      },
+    });
 
   // Auto-scroll when new messages arrive
   useEffect(() => {
@@ -37,9 +138,7 @@ export default function RoomDetailPage() {
           .from("rooms")
           .select(
             `
-            id, name, type_id, image_url, color, active, chain_family, contract_address, round_time, round_ends_on, creator_id,
-            game_master_id, game_master_action_log, pvp_action_log, room_config, created_at, updated_at, chain_id,
-    
+           *,
             participants:user_rooms(count),
     
             room_agents!inner(
@@ -51,26 +150,19 @@ export default function RoomDetailPage() {
                 color
               )
             ),
-    
-            users:user_rooms(count),
-    
-            rounds!inner(
-              id,
-              created_at,
-              round_agent_messages!inner(
-                id, agent_id, message, created_at
-              ),
-              round_user_messages!inner(
-                id, user_id, message, created_at
-              )
-            )
+            users:user_rooms(count)
+            rounds(count)
           `
           )
-          .eq("rooms.id", parseInt(id))
-          .order("created_at", { referencedTable: "rounds", ascending: false })
+          .eq("id", parseInt(id))
           .single();
+        console.log("roomData", roomData);
+        if (error) {
+          console.error("Error loading room details:", error);
+          throw error;
+        }
 
-        if (error) throw error;
+        console.log("Fetched room");
 
         const { data: roundCountData, error: roundCountError } = await supabase
           .from("rounds")
@@ -130,46 +222,16 @@ export default function RoomDetailPage() {
     loadRoomDetails();
   }, [id]);
 
-  // WebSocket connection for real-time user messages
-  useEffect(() => {
-    const initWebSocket = () => {
-      const ws = new WebSocket(
-        `ws://${process.env.NEXT_PUBLIC_BACKEND_URL}/ws`
-      );
+  // Connection status for debugging
+  const connectionStatus = {
+    [ReadyState.CONNECTING]: "Connecting",
+    [ReadyState.OPEN]: "Open",
+    [ReadyState.CLOSING]: "Closing",
+    [ReadyState.CLOSED]: "Closed",
+    [ReadyState.UNINSTANTIATED]: "Uninstantiated",
+  }[readyState];
 
-      ws.onopen = () => {
-        console.log("WebSocket connected");
-        ws.send(JSON.stringify({ type: "subscribe_room", roomId: id }));
-      };
-
-      ws.onmessage = (event) => {
-        const message = JSON.parse(event.data);
-        console.log("Received message:", message);
-        const timestamp = Date.now();
-        setLastMessageTimestamp(timestamp);
-        setUserMessages((prev) => [
-          { ...message, _timestamp: timestamp },
-          ...prev,
-        ]);
-      };
-
-      ws.onerror = (error) => console.error("WebSocket error:", error);
-      ws.onclose = () => {
-        console.log("WebSocket disconnected");
-        setTimeout(initWebSocket, 5000);
-      };
-
-      setWsConnection(ws);
-    };
-
-    initWebSocket();
-
-    return () => {
-      if (wsConnection) {
-        wsConnection.close();
-      }
-    };
-  }, [id, wsConnection]);
+  console.log("WebSocket status:", connectionStatus);
 
   if (loading) {
     return <Loader />;

@@ -47,6 +47,7 @@
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.54.2",
     "react-jazzicon": "^1.0.4",
+    "react-use-websocket": "^4.12.0",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.24.1"
