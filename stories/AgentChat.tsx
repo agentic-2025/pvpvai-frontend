@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { ReactNode } from "react";
@@ -8,15 +8,17 @@ export interface AgentChatMessage {
   agentId: number;
   message: ReactNode;
   createdAt: string;
-  agentDetails: {
-    id: number;
-    agents: {
-      id: number;
-      color: string;
-      image_url: string;
-      display_name: string;
+  agentDetails?: {
+    id?: number;
+    agents?: {
+      id?: number;
+      color?: string;
+      image_url?: string;
+      display_name?: string;
     };
   };
+  sentiment?: string;
+  additionalIcons?: string[];
 }
 
 interface AgentChatProps {
@@ -41,19 +43,26 @@ export function AgentChat({
       )}
       <ScrollArea className="flex-1">
         <div className="flex flex-col divide-y divide-gray-800">
-          {messages.map((msg, index) => (
-            <AgentChatLine
-              key={index}
-              agentName={msg.agentDetails.agents.display_name}
-              agentImageUrl={msg.agentDetails.agents.image_url}
-              agentBorderColor={msg.agentDetails.agents.color}
-              message={msg.message}
-              createdAt={msg.createdAt}
-              sentiment={msg.sentiment}
-              showSentiment={showSentiment}
-              additionalIcons={msg.additionalIcons}
-            />
-          ))}
+          {messages.map((msg, index) => {
+            // Use fallback values in case agentDetails or its nested properties are missing.
+            const agentDisplayName =
+              msg.agentDetails?.agents?.display_name || "Unknown Agent";
+            const agentImageUrl = msg.agentDetails?.agents?.image_url || "";
+            const agentBorderColor =
+              msg.agentDetails?.agents?.color || "#cccccc";
+            return (
+              <AgentChatLine
+                key={index}
+                agentName={agentDisplayName}
+                agentImageUrl={agentImageUrl}
+                agentBorderColor={agentBorderColor}
+                message={msg.message}
+                sentiment={msg.sentiment}
+                showSentiment={showSentiment}
+                additionalIcons={msg.additionalIcons}
+              />
+            );
+          })}
         </div>
       </ScrollArea>
     </div>

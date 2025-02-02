@@ -22,26 +22,28 @@ interface AgentChatLineProps {
   creatorAddress?: string;
   popularity?: number;
   additionalIcons?: string[];
-  createdAt: string;
 }
 
-const actionColors = {
+const actionColors: Record<
+  string,
+  { text: string; darkText?: string; iconColor?: string }
+> = {
   poisoned: {
     text: "#A020F0", // Bright purple
     darkText: "#6B21A8", // Dark purple
-    iconColor: "#A020F0", // Purple for SVG
+    iconColor: "#A020F0",
   },
   attacked: {
     text: "#EF4444", // Bright red
-    darkText: "#991B1B", // Dark red
+    darkText: "#991B1B",
   },
   muted: {
     text: "#6B7280", // Grey
-    darkText: "#4B5563", // Dark grey
+    darkText: "#4B5563",
   },
   deafened: {
     text: "#3B82F6", // Blue
-    darkText: "#2563EB", // Dark blue
+    darkText: "#2563EB",
   },
 };
 
@@ -58,10 +60,17 @@ export function AgentChatLine({
   popularity,
   additionalIcons,
 }: AgentChatLineProps) {
+  // FIX: extract the text from message if it is an object with a "text" property.
+  let renderedMessage: string;
+  if (typeof message === "object" && message !== null) {
+    renderedMessage = (message as any).text || JSON.stringify(message);
+  } else {
+    renderedMessage = String(message);
+  }
+
   const bgOpacity = isGM ? "70" : "20";
-  const isPvP = agentName === "PvP";
-  const actionIcon = isPvP && additionalIcons?.[0];
-  const actionColor = actionColors[agentName];
+  // Use lowercase agentName for matching in actionColors (if applicable)
+  const actionColor = actionColors[agentName.toLowerCase()] || { text: "gray" };
 
   return (
     <div className="flex items-stretch gap-2 py-1 px-2">
@@ -86,13 +95,15 @@ export function AgentChatLine({
         }}
       >
         <div className="flex items-center gap-2">
-          {actionIcon && (
+          {additionalIcons && additionalIcons[0] && (
             <Image
-              src={actionIcon}
+              src={additionalIcons[0]}
               alt="action"
               className="w-5 h-5 shrink-0"
               style={{
-                filter: actionColor?.iconColor ? `hue-rotate(270deg) saturate(2)` : undefined,
+                filter: actionColor.iconColor
+                  ? `hue-rotate(270deg) saturate(2)`
+                  : undefined,
               }}
               width={2000}
               height={2000}
@@ -105,18 +116,20 @@ export function AgentChatLine({
                   <div
                     className={cn(
                       "text-sm",
-                      actionColor?.text ? `text-[${actionColor.text}]` : "text-gray-200",
+                      actionColor.text
+                        ? `text-[${actionColor.text}]`
+                        : "text-gray-200",
                       "line-clamp-5 break-words"
                     )}
                   >
-                    {message}
+                    {renderedMessage}
                   </div>
                 </TooltipTrigger>
                 <TooltipContent
                   side="bottom"
                   className="max-w-[300px] break-words bg-gray-800 border-gray-700 text-gray-200"
                 >
-                  {message}
+                  {renderedMessage}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
