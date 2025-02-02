@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { Navbar } from "./Navbar";
 import { PrivyProvider } from "@privy-io/react-auth";
-import { BULL_GREEN_HEX } from "@/lib/consts";
+import { BULL_GREEN_HEX } from "@/lib/config";
 
 const meta = {
   title: "Components/Navbar",
