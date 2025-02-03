@@ -143,6 +143,7 @@ export default function RoomDetailPage() {
           agentId: msg.agent_id,
           message: normalizeMessage(msg),
           createdAt: msg.created_at,
+          messageType: msg.message_type,
           agentDetails:
             roundAgents.find((agent: any) => agent.id === msg.agent_id) || null,
         })) ?? [];
@@ -185,7 +186,7 @@ export default function RoomDetailPage() {
             ? new Date(msg.created_at).getTime()
             : Date.now(),
           content: msg.content || {},
-          type: WsMessageType.AGENT_CHAT,
+          messageType: msg.message_type,
         })) ?? []
       );
     } catch (error) {
@@ -289,7 +290,7 @@ export default function RoomDetailPage() {
         });
       },
       onMessage: (event) => {
-        console.log("Received message:", event.data);
+        console.log("Received message:", event.data, event.data);
         let data;
         try {
           data =
@@ -300,7 +301,7 @@ export default function RoomDetailPage() {
           console.error("Failed to parse websocket message", err);
           return;
         }
-
+        console.log("event data type", data.type);
         if (data.type === WsMessageType.PUBLIC_CHAT) {
           setMessages((prev) => {
             const newMessageId = data.content?.message_id;
@@ -324,8 +325,7 @@ export default function RoomDetailPage() {
         if (
           data.type === WsMessageType.GM_ACTION ||
           data.type === WsMessageType.AI_CHAT ||
-          data.type === WsMessageType.PVP_ACTION ||
-          data.type === WsMessageType.AGENT_CHAT
+          data.type === WsMessageType.PVP_ACTION
         ) {
           setAgentMessages((prev) => {
             const newMessageId = data.content?.message_id;
@@ -339,6 +339,7 @@ export default function RoomDetailPage() {
                 ...data,
                 _timestamp: Date.now(),
                 message: normalizeMessage(data),
+                messageType: data.type,
               },
             ];
           });

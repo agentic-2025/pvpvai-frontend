@@ -3,8 +3,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { ReactNode } from "react";
 import { AgentChatLine } from "./AgentChatLine";
+import { WsMessageType } from "@/lib/backend.types";
+import { GMChatLine } from "./GMChatLine";
 
 export interface AgentChatMessage {
+  messageType: WsMessageType.GM_ACTION | WsMessageType.PVP_ACTION | WsMessageType.AI_CHAT;
   agentId: number;
   message: ReactNode;
   createdAt: string;
@@ -50,18 +53,29 @@ export function AgentChat({
             const agentImageUrl = msg.agentDetails?.agents?.image_url || "";
             const agentBorderColor =
               msg.agentDetails?.agents?.color || "#cccccc";
-            return (
-              <AgentChatLine
-                key={index}
-                agentName={agentDisplayName}
-                agentImageUrl={agentImageUrl}
-                agentBorderColor={agentBorderColor}
-                message={msg.message}
-                sentiment={msg.sentiment}
-                showSentiment={showSentiment}
-                additionalIcons={msg.additionalIcons}
-              />
-            );
+
+            if (msg.messageType === WsMessageType.GM_ACTION) {
+              return (
+                <GMChatLine
+                  key={index}
+                  message={msg.message}
+                />
+              );
+            } else {
+              return (
+                <AgentChatLine
+                  key={index}
+                  agentName={agentDisplayName}
+                  agentImageUrl={agentImageUrl}
+                  agentBorderColor={agentBorderColor}
+                  message={msg.message}
+                  sentiment={msg.sentiment}
+                  showSentiment={showSentiment}
+                  additionalIcons={msg.additionalIcons}
+                />
+              );
+            }
+
           })}
         </div>
       </ScrollArea>

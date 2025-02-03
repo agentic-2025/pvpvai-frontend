@@ -2,9 +2,10 @@ import { FC } from "react";
 import { AgentChatLine } from "./AgentChatLine";
 import Mama from "./assets/gm.png";
 import Gavel from "./assets/pvp/gavel.svg";
+import { ReactNode } from "react";
 
 interface GMChatLineProps {
-  message: string;
+  message: ReactNode;
 }
 
 export const GMChatLine: FC<GMChatLineProps> = ({ message }) => {
