@@ -48,7 +48,7 @@ const PlayerAddressChipComponent: FC<PlayerAddressChipProps> = ({
   let avatar = (
     <Jazzicon
       diameter={config.jazziconDiam}
-      seed={jsNumberForAddress(address)}
+      seed={jsNumberForAddress(String(address))}
     />
   );
 

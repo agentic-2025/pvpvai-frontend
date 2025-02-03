@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tables } from "@/lib/database.types";
+import { CreateRoomModal } from "./CreateRoomModal";
 
 export type Agent = Tables<"agents">;
 export type Room = Tables<"rooms">;
@@ -78,6 +79,7 @@ export function RoomTable({
     roomType
   );
   const [direction, setDirection] = useState(0);
+  const [createRoomOpen, setCreateRoomOpen] = useState(false);
 
   // Determine if Buy Sell rooms are selected
   const isBuySell = selectedType === "Buy / Hold / Sell";
@@ -115,27 +117,35 @@ export function RoomTable({
 
   return (
     <div className="space-y-8">
-      {showTabs && (
-        <div className="flex justify-center">
-          <div className="bg-secondary/30 p-1.5 rounded-lg">
-            <AnimatedBackground
-              className="bg-secondary/50 rounded-md"
-              defaultValue={selectedType}
-              onValueChange={handleTypeChange}
-            >
-              {roomTypes.map((type) => (
-                <button
-                  key={type}
-                  data-id={type}
-                  className="px-6 py-3 rounded-md text-xl font-medium transition-colors"
-                >
-                  {type}
-                </button>
-              ))}
-            </AnimatedBackground>
+      <div className="flex justify-between items-center">
+        {showTabs && (
+          <div className="flex justify-center">
+            <div className="bg-secondary/30 p-1.5 rounded-lg">
+              <AnimatedBackground
+                className="bg-secondary/50 rounded-md"
+                defaultValue={selectedType}
+                onValueChange={handleTypeChange}
+              >
+                {roomTypes.map((type) => (
+                  <button
+                    key={type}
+                    data-id={type}
+                    className="px-6 py-3 rounded-md text-xl font-medium transition-colors"
+                  >
+                    {type}
+                  </button>
+                ))}
+              </AnimatedBackground>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+        <button
+          onClick={() => setCreateRoomOpen(true)}
+          className="px-4 py-2 h-fit bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+        >
+          Create Room
+        </button>
+      </div>
 
       <div
         className="overflow-hidden relative"
@@ -196,6 +206,7 @@ export function RoomTable({
           </AnimatedCard>
         ))}
       </div>
+      <CreateRoomModal open={createRoomOpen} onOpenChange={setCreateRoomOpen} />
     </div>
   );
 }

@@ -82,6 +82,13 @@ export const chainMetadata: Record<number, ChainMetadata> = {
     iconFull: baseFullIcon.src,
     family: "EVM",
   },
+  8453: {
+    id: 8453,
+    name: "Base",
+    icon: baseIcon.src,
+    iconFull: baseFullIcon.src,
+    family: "EVM",
+  },
   421614: {
     id: 421614,
     name: "Arbitrum Sepolia",

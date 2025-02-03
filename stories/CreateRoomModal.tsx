@@ -4,8 +4,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { supabase } from "@/lib/config";
-import { SupportedChains } from "@/lib/consts";
+import  supabase  from "@/lib/config";
 import { Tables } from "@/lib/database.types";
 import { cn, generateRandomColor, getChainMetadata } from "@/lib/utils";
 import { OnchainKitProvider } from "@coinbase/onchainkit";
@@ -27,6 +26,7 @@ import flowIcon from "./assets/crypto/flow-full-white.svg";
 import solanaIcon from "./assets/crypto/solana-full-color.svg";
 import { ChainButton } from "./ChainButton";
 import { PvPRuleCard } from "./PvPRuleCard";
+import { SupportedChains } from "@/lib/consts";
 
 type PvPRule =
   | "SILENCE"
@@ -239,7 +239,7 @@ export function CreateRoomModal({
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/rooms`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/rooms/setup`,
         {
           method: "POST",
           headers: {
