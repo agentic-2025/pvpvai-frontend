@@ -1,16 +1,18 @@
+"use client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import Jazzicon, { jsNumberForAddress } from "react-jazzicon";
 import { PlayerAddressChip } from "./PlayerAddressChip";
 
-interface PublicChatLineProps {
+export interface PublicChatLineProps {
   address: string;
   avatarUrl?: string;
   message: string;
   timestamp: Date;
   className?: string;
   variant?: "default" | "compact";
+  showAvatar?: boolean; // <-- Added showAvatar prop
 }
 
 export function PublicChatLine({
@@ -43,7 +45,10 @@ export function PublicChatLine({
               </AvatarFallback>
             </Avatar>
           ) : (
-            <Jazzicon diameter={24} seed={jsNumberForAddress(address)} />
+            <Jazzicon
+              diameter={24}
+              seed={jsNumberForAddress(String(address))}
+            />
           )}
         </div>
         <div className="flex gap-2 items-baseline min-w-0">
@@ -67,7 +72,7 @@ export function PublicChatLine({
             </AvatarFallback>
           </Avatar>
         ) : (
-          <Jazzicon diameter={40} seed={jsNumberForAddress(address)} />
+          <Jazzicon diameter={40} seed={jsNumberForAddress(String(address))} />
         )}
       </div>
       <div className="flex-1 min-w-0">

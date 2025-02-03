@@ -1,6 +1,7 @@
+"use client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { KeyboardEvent, useState } from "react";
+import { KeyboardEvent, useLayoutEffect, useRef, useState } from "react";
 import { PublicChatLine } from "./PublicChatLine";
 
 const MAX_MESSAGE_LENGTH = 500;
@@ -28,6 +29,7 @@ export function PublicChat({
   variant = "default",
 }: PublicChatProps) {
   const [inputValue, setInputValue] = useState("");
+  const endOfMessagesRef = useRef<HTMLDivElement>(null);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey && inputValue.trim()) {
@@ -46,27 +48,27 @@ export function PublicChat({
   const charsRemaining = MAX_MESSAGE_LENGTH - inputValue.length;
   const showCounter = inputValue.length > 0;
 
+  // Scroll to the bottom when messages update.
+  useLayoutEffect(() => {
+    endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   return (
-    <div className={cn("flex flex-col h-full bg-[#313338]", className)}>
+    <div className={cn("flex flex-col h-full bg-[#313338] w-full", className)}>
       <ScrollArea className="flex-1">
         <div className="flex flex-col py-4">
           {messages.map((msg, index) => (
             <PublicChatLine
               key={index}
-              address={msg.address}
+              address={String(msg.address)}
               avatarUrl={msg.avatarUrl}
               message={msg.message}
               timestamp={msg.timestamp}
               variant={variant}
-              showAvatar={
-                index === 0 ||
-                messages[index - 1].address !== msg.address ||
-                msg.timestamp.getTime() -
-                  messages[index - 1].timestamp.getTime() >
-                  5 * 60 * 1000
-              }
             />
           ))}
+          {/* Dummy div to scroll into view */}
+          <div ref={endOfMessagesRef} />
         </div>
       </ScrollArea>
       {onSendMessage && currentUserAddress && (

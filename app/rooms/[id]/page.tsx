@@ -10,8 +10,9 @@ import { BuySellGameAvatarInteraction } from "@/stories/BuySellGameAvatarInterac
 import { RoomWithRelations } from "@/stories/RoomTable";
 import { motion } from "framer-motion";
 import { useParams } from "next/navigation";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import useWebSocket, { ReadyState } from "react-use-websocket";
+import { PublicChat, PublicChatMessage } from "@/stories/PublicChat";
 
 export default function RoomDetailPage() {
   const params = useParams();
@@ -22,6 +23,7 @@ export default function RoomDetailPage() {
   const [roomData, setRoomData] = useState<RoomWithRelations | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
+  // Separate states for public chat and agent messages
   const [messages, setMessages] = useState<any[]>([]);
   const [agentMessages, setAgentMessages] = useState<any[]>([]);
 
@@ -29,15 +31,20 @@ export default function RoomDetailPage() {
   const [roundList, setRoundList] = useState<any[]>([]);
   const [currentRoundIndex, setCurrentRoundIndex] = useState<number>(0);
 
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const currentUserId = 1;
   const { toast } = useToast();
   const maxRetries = 5;
 
-  // Normalize message text from different formats
+  // Normalize message text from different formats.
+  // For gm_action messages, extract nested text if available.
   const normalizeMessage = (msg: any) => {
-    if (msg.content && typeof msg.content.text === "string") {
-      return msg.content.text;
+    if (msg.content) {
+      if (msg.content.content && typeof msg.content.content.text === "string") {
+        return msg.content.content.text;
+      }
+      if (typeof msg.content.text === "string") {
+        return msg.content.text;
+      }
     }
     if (msg.message && typeof msg.message === "object" && msg.message.text) {
       return msg.message.text;
@@ -45,20 +52,8 @@ export default function RoomDetailPage() {
     return msg.message || "";
   };
 
-  // Scroll to the bottom when messages update
-  useLayoutEffect(() => {
-    const container = scrollContainerRef.current;
-    if (container) {
-      container.scrollTo({
-        top: container.scrollHeight,
-        behavior: "smooth",
-      });
-    }
-  }, [messages]);
-
   // --- API FETCHING FUNCTIONS ---
 
-  // 1. Fetch room details (without round-specific data)
   const fetchRoomDetails = async (roomId: number) => {
     const { data, error } = await supabase
       .from("rooms")
@@ -91,7 +86,6 @@ export default function RoomDetailPage() {
     return data;
   };
 
-  // 2. Fetch the list of rounds (ids and created_at) for the room
   const fetchRoundList = async (roomId: number) => {
     const { data, error } = await supabase
       .from("rounds")
@@ -102,7 +96,6 @@ export default function RoomDetailPage() {
     return data;
   };
 
-  // 3. Fetch details for a specific round (by round id)
   const fetchRoundDetails = async (roundId: number) => {
     const { data, error } = await supabase
       .from("rounds")
@@ -121,23 +114,20 @@ export default function RoomDetailPage() {
     return data;
   };
 
-  // 4. Load round-specific data and update roomData and messages
   const loadRoundData = async (roundId: number) => {
     try {
       const round = await fetchRoundDetails(roundId);
 
-      // Process agents solely from round data (ignore room.room_agents)
+      // Process agents solely from round data
       const roundAgents =
-        round?.round_agents?.map((ra: any) => {
-          return {
-            id: ra.agent_id || ra.agents?.id,
-            displayName: ra.display_name || ra.agents?.display_name,
-            image: ra.image_url || ra.agents?.image_url,
-            color: ra.color || ra.agents?.color,
-          };
-        }) ?? [];
+        round?.round_agents?.map((ra: any) => ({
+          id: ra.agent_id || ra.agents?.id,
+          displayName: ra.display_name || ra.agents?.display_name,
+          image: ra.image_url || ra.agents?.image_url,
+          color: ra.color || ra.agents?.color,
+        })) ?? [];
 
-      // Process agent messages from round_agent_messages
+      // Process agent messages from round_agent_messages.
       const processedAgentMsgs =
         round?.round_agent_messages?.map((msg: any) => ({
           agentId: msg.agent_id,
@@ -146,9 +136,13 @@ export default function RoomDetailPage() {
           messageType: msg.message_type,
           agentDetails:
             roundAgents.find((agent: any) => agent.id === msg.agent_id) || null,
+          _timestamp: msg.created_at
+            ? new Date(msg.created_at).getTime()
+            : Date.now(),
+          type: msg.message_type || WsMessageType.GM_ACTION,
         })) ?? [];
 
-      // Process public user messages from round_user_messages
+      // Process public user messages from round_user_messages.
       const processedUserMsgs =
         round?.round_user_messages?.map((msg: any) => ({
           userId: msg.user_id,
@@ -164,30 +158,21 @@ export default function RoomDetailPage() {
       processedUserMsgs.sort((a, b) => a._timestamp - b._timestamp);
 
       // Update roomData with round-specific data.
-      // Note: We keep room details (like name, participants) as previously fetched.
       setRoomData((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
-          agents: roundAgents, // Use agents exclusively from this round.
-          roundNumber: roundList.length, // Total rounds count
-          agentMessages: processedAgentMsgs,
+          agents: roundAgents,
+          roundNumber: roundList.length,
         };
       });
 
-      // Update chat messages state
       setMessages(processedUserMsgs);
+      // For agent messages, keep only the latest 50.
       setAgentMessages(
-        round?.round_agent_messages?.map((msg: any) => ({
-          agentId: msg.agent_id,
-          message: normalizeMessage(msg),
-          createdAt: msg.created_at,
-          _timestamp: msg.created_at
-            ? new Date(msg.created_at).getTime()
-            : Date.now(),
-          content: msg.content || {},
-          messageType: msg.message_type,
-        })) ?? []
+        processedAgentMsgs.length > 50
+          ? processedAgentMsgs.slice(processedAgentMsgs.length - 50)
+          : processedAgentMsgs
       );
     } catch (error) {
       console.error("Error loading round details:", error);
@@ -203,16 +188,18 @@ export default function RoomDetailPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Fetch and set room details
         const room = await fetchRoomDetails(roomId);
         const totalParticipants = room.participants?.[0]?.count ?? 0;
-        setRoomData({ ...room, participants: totalParticipants });
+        setRoomData({
+          ...room,
+          participants: totalParticipants,
+          agents: [],
+          roundNumber: 0,
+        });
 
-        // Fetch and store round list
         const roundsData = await fetchRoundList(roomId);
         setRoundList(roundsData);
 
-        // If there are rounds, load the latest round (index 0)
         if (roundsData.length > 0) {
           setCurrentRoundIndex(0);
           await loadRoundData(roundsData[0].id);
@@ -234,7 +221,6 @@ export default function RoomDetailPage() {
 
   // --- Round Navigation Handlers ---
   const handlePrevRound = async () => {
-    // "Prev" means moving to an older round (i.e. a higher index)
     if (currentRoundIndex < roundList.length - 1) {
       const newIndex = currentRoundIndex + 1;
       setCurrentRoundIndex(newIndex);
@@ -243,7 +229,6 @@ export default function RoomDetailPage() {
   };
 
   const handleNextRound = async () => {
-    // "Next" means moving to a newer round (i.e. a lower index)
     if (currentRoundIndex > 0) {
       const newIndex = currentRoundIndex - 1;
       setCurrentRoundIndex(newIndex);
@@ -251,7 +236,7 @@ export default function RoomDetailPage() {
     }
   };
 
-  // --- WebSocket Logic (Unchanged) ---
+  // --- WebSocket Logic ---
   const socketUrl = `${process.env.NEXT_PUBLIC_BACKEND_WS_URL}`;
   const { sendMessage, readyState, getWebSocket } =
     useWebSocket<WSMessageOutput>(socketUrl, {
@@ -290,7 +275,7 @@ export default function RoomDetailPage() {
         });
       },
       onMessage: (event) => {
-        console.log("Received message:", event.data, event.data);
+        console.log("Received message:", event.data);
         let data;
         try {
           data =
@@ -302,6 +287,7 @@ export default function RoomDetailPage() {
           return;
         }
         console.log("event data type", data.type);
+
         if (data.type === WsMessageType.PUBLIC_CHAT) {
           setMessages((prev) => {
             const newMessageId = data.content?.message_id;
@@ -323,25 +309,28 @@ export default function RoomDetailPage() {
           });
         }
         if (
-          data.type === WsMessageType.GM_ACTION ||
           data.type === WsMessageType.AI_CHAT ||
-          data.type === WsMessageType.PVP_ACTION
+          data.type === WsMessageType.GM_ACTION ||
+          data.type === WsMessageType.PVP_ACTION ||
+          data.type === WsMessageType.OBSERVATION
         ) {
+          console.log("Agent message received:", data);
           setAgentMessages((prev) => {
             const newMessageId = data.content?.message_id;
             const alreadyExists = newMessageId
               ? prev.some((msg) => msg.content?.message_id === newMessageId)
               : false;
             if (alreadyExists) return prev;
-            return [
-              ...prev,
-              {
-                ...data,
-                _timestamp: Date.now(),
-                message: normalizeMessage(data),
-                messageType: data.type,
-              },
-            ];
+            const newMessage = {
+              ...data,
+              _timestamp: Date.now(),
+              message: normalizeMessage(data),
+              messageType: data.type,
+            };
+            const updated = [...prev, newMessage];
+            return updated.length > 50
+              ? updated.slice(updated.length - 50)
+              : updated;
           });
         }
         if (data.type === WsMessageType.SYSTEM_NOTIFICATION) {
@@ -397,9 +386,14 @@ export default function RoomDetailPage() {
   }[readyState];
   console.log("WebSocket status:", connectionStatus);
 
-  // Filter for public messages to display
+  // Filter for public messages to display.
   const publicMessages = messages.filter(
     (msg) => msg.type === WsMessageType.PUBLIC_CHAT
+  );
+
+  // Combine public messages and agent messages, sorted by timestamp.
+  const combinedMessages = [...publicMessages, ...agentMessages].sort(
+    (a, b) => a._timestamp - b._timestamp
   );
 
   if (loading) return <Loader />;
@@ -409,6 +403,14 @@ export default function RoomDetailPage() {
         <span>Room not found</span>
       </div>
     );
+
+  // Convert public messages to the shape expected by PublicChat.
+  const publicChatMessages: PublicChatMessage[] = publicMessages.map((msg) => ({
+    address: msg.content?.author || msg.userId || "Unknown",
+    avatarUrl: "", // Optionally, add logic to set avatar
+    message: msg.message,
+    timestamp: new Date(msg._timestamp),
+  }));
 
   return (
     <div className="flex items-center justify-center h-screen">
@@ -445,16 +447,16 @@ export default function RoomDetailPage() {
                 </div>
               </div>
             </div>
-            {/* Agent Chat */}
+            {/* Agent Chat: shows only agent messages */}
             <div className="flex-1 bg-card rounded-lg overflow-hidden w-full">
               <AgentChat
-                className="h-full"
+                className="h-full min-w-full"
                 showHeader={false}
                 messages={agentMessages}
               />
             </div>
           </div>
-          {/* Right Section: Room Details, Round Navigation, and User Chat */}
+          {/* Right Section: Room Details, Round Navigation, and Public Chat */}
           <div className="w-[35%] flex flex-col gap-6">
             {/* Room Details and Round Navigation */}
             <div className="h-[20%] bg-card rounded-lg p-4 flex flex-col items-center justify-center gap-y-2">
@@ -485,48 +487,16 @@ export default function RoomDetailPage() {
                 {roomData.participants} Participants
               </span>
             </div>
-            {/* User Messages */}
+            {/* Public Chat: shows streaming public messages */}
             <div className="flex flex-col bg-card rounded-lg p-4 overflow-y-auto h-full">
-              <div
-                className="flex-1 bg-muted rounded-lg p-3 flex flex-col overflow-y-auto"
-                ref={scrollContainerRef}
-              >
-                {publicMessages.length === 0 ? (
-                  <span className="text-gray-400">No user messages yet</span>
-                ) : (
-                  publicMessages.map((msg, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="mb-2"
-                    >
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center">
-                          <div className="w-8 h-8 bg-gray-400 rounded-full flex justify-center items-center">
-                            {msg.content?.author || msg.userId || "U"}
-                          </div>
-                          <div className="ml-2">
-                            <p className="text-white">{msg.message}</p>
-                          </div>
-                        </div>
-                        <div className="text-xs text-gray-300">
-                          <span>
-                            {new Date(msg._timestamp).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </span>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))
-                )}
-              </div>
-              <Input
-                type="text"
-                placeholder="Type a message..."
-                className="p-2 bg-gray-800 text-white rounded-lg mt-auto"
+              <PublicChat
+                messages={publicChatMessages}
+                className="h-full"
+                currentUserAddress={String(currentUserId)}
+                onSendMessage={(message) => {
+                  // Optionally: implement sending message logic here.
+                  console.log("User sending message:", message);
+                }}
               />
             </div>
           </div>

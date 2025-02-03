@@ -1,13 +1,17 @@
 "use client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { ReactNode } from "react";
+import { ReactNode, useLayoutEffect, useRef } from "react";
 import { AgentChatLine } from "./AgentChatLine";
 import { WsMessageType } from "@/lib/backend.types";
 import { GMChatLine } from "./GMChatLine";
 
 export interface AgentChatMessage {
-  messageType: WsMessageType.GM_ACTION | WsMessageType.PVP_ACTION | WsMessageType.AI_CHAT;
+  messageType:
+    | WsMessageType.GM_ACTION
+    | WsMessageType.PVP_ACTION
+    | WsMessageType.AI_CHAT
+    | WsMessageType.OBSERVATION;
   agentId: number;
   message: ReactNode;
   createdAt: string;
@@ -37,6 +41,13 @@ export function AgentChat({
   showSentiment = true,
   className,
 }: AgentChatProps) {
+  const endOfMessagesRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to the bottom when agent messages update.
+  useLayoutEffect(() => {
+    endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   return (
     <div className={cn("flex flex-col h-full w-full", className)}>
       {showHeader && (
@@ -55,12 +66,7 @@ export function AgentChat({
               msg.agentDetails?.agents?.color || "#cccccc";
 
             if (msg.messageType === WsMessageType.GM_ACTION) {
-              return (
-                <GMChatLine
-                  key={index}
-                  message={msg.message}
-                />
-              );
+              return <GMChatLine key={index} message={msg.message} />;
             } else {
               return (
                 <AgentChatLine
@@ -75,8 +81,9 @@ export function AgentChat({
                 />
               );
             }
-
           })}
+          {/* Dummy element to scroll into view */}
+          <div ref={endOfMessagesRef} />
         </div>
       </ScrollArea>
     </div>
