@@ -18,7 +18,6 @@ const RoomsPage: FC = () => {
           .select(
             `
             *,
-            participants:user_rooms(count),
             rounds!inner(
               id,
               round_agents!inner(
