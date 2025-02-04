@@ -23,6 +23,7 @@ import {
 import usdcIcon from "@/stories/assets/crypto/usdc.svg";
 import Image from "next/image";
 import autonomeIcon from "@/stories/assets/ai/autonome-full.svg";
+import CreateAgentDialog from "@/stories/CreateAgentDialog";
 
 export type Agent = {
   id: number;
@@ -117,6 +118,7 @@ export default function AgentsPage() {
             </AnimatedBackground>
           </div>
         </div>
+        <CreateAgentDialog />
       </div>
 
       {/* Table */}
@@ -216,7 +218,11 @@ export default function AgentsPage() {
 
                   {/* Deployed To */}
                   <TableCell className="text-lg text-center text-gray-900 dark:text-gray-300">
-                    <Image src={autonomeIcon} alt="alt" className="h-6 w-fit mx-auto" />
+                    <Image
+                      src={autonomeIcon}
+                      alt="alt"
+                      className="h-6 w-fit mx-auto"
+                    />
                   </TableCell>
 
                   {/* Lifetime Earnings */}

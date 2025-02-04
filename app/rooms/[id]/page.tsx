@@ -7,7 +7,6 @@ import supabase from "@/lib/config";
 import { AgentChat } from "@/stories/AgentChat";
 import { BuySellGameAvatarInteraction } from "@/stories/BuySellGameAvatarInteraction";
 import { PublicChat, PublicChatMessage } from "@/stories/PublicChat";
-import { RoomWithRelations } from "@/stories/RoomTable";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import useWebSocket, { ReadyState } from "react-use-websocket";
@@ -118,7 +117,7 @@ export default function RoomDetailPage() {
           _timestamp: msg.created_at
             ? new Date(msg.created_at).getTime()
             : Date.now(),
-          type: msg.message_type || WsMessageTypes.GM_ACTION,
+          type: msg.message_type || WsMessageTypes.GM_MESSAGE,
         })) ?? [];
 
       // Process public user messages from round_user_messages.
@@ -137,7 +136,7 @@ export default function RoomDetailPage() {
       processedUserMsgs.sort((a, b) => a._timestamp - b._timestamp);
 
       // Update roomData with round-specific data.
-      setRoomData((prev) => {
+      setRoomData((prev: any) => {
         if (!prev) return prev;
         return {
           ...prev,
@@ -267,7 +266,7 @@ export default function RoomDetailPage() {
 
         if (data.type === WsMessageTypes.PUBLIC_CHAT) {
           setMessages((prev) => {
-            const updated = [...prev, publicMessage];
+            const updated = [...prev, publicMessages];
             return updated.length > 50
               ? updated.slice(updated.length - 50)
               : updated;
