@@ -1,17 +1,17 @@
 "use client";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { WsMessageTypes } from "@/lib/backend.types";
 import { cn } from "@/lib/utils";
 import { ReactNode, useLayoutEffect, useRef } from "react";
 import { AgentChatLine } from "./AgentChatLine";
-import { WsMessageType } from "@/lib/backend.types";
 import { GMChatLine } from "./GMChatLine";
-
 export interface AgentChatMessage {
   messageType:
-    | WsMessageType.GM_ACTION
-    | WsMessageType.PVP_ACTION
-    | WsMessageType.AI_CHAT
-    | WsMessageType.OBSERVATION;
+    | WsMessageTypes.GM_MESSAGE
+    | WsMessageTypes.AI_CHAT_AGENT_MESSAGE
+    | WsMessageTypes.AI_CHAT_PVP_ACTION_ENACTED
+    | WsMessageTypes.AI_CHAT_PVP_STATUS_REMOVED
+    | WsMessageTypes.OBSERVATION;
   agentId: number;
   message: ReactNode;
   createdAt: string;
@@ -65,7 +65,9 @@ export function AgentChat({
             const agentBorderColor =
               msg.agentDetails?.agents?.color || "#cccccc";
 
-            if (msg.messageType === WsMessageType.GM_ACTION) {
+            console.log("msg", msg);
+            console.log("msg", msg.messageType);
+            if (msg.messageType === WsMessageTypes.GM_MESSAGE) {
               return <GMChatLine key={index} message={msg.message} />;
             } else {
               return (

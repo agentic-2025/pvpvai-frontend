@@ -1,18 +1,16 @@
 "use client";
 
 import Loader from "@/components/loader";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { WSMessageOutput, WsMessageType } from "@/lib/backend.types";
+import { AllOutputSchemaTypes, WsMessageTypes } from "@/lib/backend.types";
 import supabase from "@/lib/config";
 import { AgentChat } from "@/stories/AgentChat";
 import { BuySellGameAvatarInteraction } from "@/stories/BuySellGameAvatarInteraction";
+import { PublicChat, PublicChatMessage } from "@/stories/PublicChat";
 import { RoomWithRelations } from "@/stories/RoomTable";
-import { motion } from "framer-motion";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import useWebSocket, { ReadyState } from "react-use-websocket";
-import { PublicChat, PublicChatMessage } from "@/stories/PublicChat";
 
 export default function RoomDetailPage() {
   const params = useParams();
@@ -58,26 +56,7 @@ export default function RoomDetailPage() {
     const { data, error } = await supabase
       .from("rooms")
       .select(
-        `
-        id,
-        name,
-        type_id,
-        image_url,
-        color,
-        active,
-        chain_family,
-        contract_address,
-        round_time,
-        round_ends_on,
-        creator_id,
-        game_master_id,
-        game_master_action_log,
-        pvp_action_log,
-        room_config,
-        created_at,
-        updated_at,
-        chain_id,
-        participants:user_rooms(count)
+        `*
       `
       )
       .eq("id", roomId)
@@ -139,7 +118,7 @@ export default function RoomDetailPage() {
           _timestamp: msg.created_at
             ? new Date(msg.created_at).getTime()
             : Date.now(),
-          type: msg.message_type || WsMessageType.GM_ACTION,
+          type: msg.message_type || WsMessageTypes.GM_ACTION,
         })) ?? [];
 
       // Process public user messages from round_user_messages.
@@ -153,7 +132,7 @@ export default function RoomDetailPage() {
             : Date.now(),
           source: "api",
           content: msg.content || {},
-          type: WsMessageType.PUBLIC_CHAT,
+          type: WsMessageTypes.PUBLIC_CHAT,
         })) ?? [];
       processedUserMsgs.sort((a, b) => a._timestamp - b._timestamp);
 
@@ -189,10 +168,8 @@ export default function RoomDetailPage() {
     const loadData = async () => {
       try {
         const room = await fetchRoomDetails(roomId);
-        const totalParticipants = room.participants?.[0]?.count ?? 0;
         setRoomData({
           ...room,
-          participants: totalParticipants,
           agents: [],
           roundNumber: 0,
         });
@@ -239,7 +216,7 @@ export default function RoomDetailPage() {
   // --- WebSocket Logic ---
   const socketUrl = `${process.env.NEXT_PUBLIC_BACKEND_WS_URL}`;
   const { sendMessage, readyState, getWebSocket } =
-    useWebSocket<WSMessageOutput>(socketUrl, {
+    useWebSocket<AllOutputSchemaTypes>(socketUrl, {
       shouldReconnect: () => {
         const ws = getWebSocket();
         const retries = (ws as any)?.retries || 0;
@@ -263,7 +240,7 @@ export default function RoomDetailPage() {
         (ws as any).retries = 0;
         sendMessage(
           JSON.stringify({
-            type: WsMessageType.SUBSCRIBE_ROOM,
+            type: WsMessageTypes.SUBSCRIBE_ROOM,
             author: currentUserId,
             timeStamp: Date.now(),
             content: { roomId },
@@ -288,7 +265,7 @@ export default function RoomDetailPage() {
         }
         console.log("event data type", data.type);
 
-        if (data.type === WsMessageType.PUBLIC_CHAT) {
+        if (data.type === WsMessageTypes.PUBLIC_CHAT) {
           setMessages((prev) => {
             const newMessageId = data.content?.message_id;
             const alreadyExists = newMessageId
@@ -309,10 +286,11 @@ export default function RoomDetailPage() {
           });
         }
         if (
-          data.type === WsMessageType.AI_CHAT ||
-          data.type === WsMessageType.GM_ACTION ||
-          data.type === WsMessageType.PVP_ACTION ||
-          data.type === WsMessageType.OBSERVATION
+          data.type === WsMessageTypes.AI_CHAT_AGENT_MESSAGE ||
+          data.type === WsMessageTypes.GM_MESSAGE ||
+          data.type === WsMessageTypes.AI_CHAT_PVP_ACTION_ENACTED ||
+          data.type === WsMessageTypes.AI_CHAT_PVP_STATUS_REMOVED ||
+          data.type === WsMessageTypes.OBSERVATION
         ) {
           console.log("Agent message received:", data);
           setAgentMessages((prev) => {
@@ -333,7 +311,7 @@ export default function RoomDetailPage() {
               : updated;
           });
         }
-        if (data.type === WsMessageType.SYSTEM_NOTIFICATION) {
+        if (data.type === WsMessageTypes.SYSTEM_NOTIFICATION) {
           if (data.content.error) {
             toast({
               variant: "destructive",
@@ -388,12 +366,7 @@ export default function RoomDetailPage() {
 
   // Filter for public messages to display.
   const publicMessages = messages.filter(
-    (msg) => msg.type === WsMessageType.PUBLIC_CHAT
-  );
-
-  // Combine public messages and agent messages, sorted by timestamp.
-  const combinedMessages = [...publicMessages, ...agentMessages].sort(
-    (a, b) => a._timestamp - b._timestamp
+    (msg) => msg.type === WsMessageTypes.PUBLIC_CHAT
   );
 
   if (loading) return <Loader />;

@@ -18,9 +18,9 @@ const RoomsPage: FC = () => {
           .select(
             `
             *,
-            participants:user_rooms(count),
             rounds!inner(
               id,
+              created_at,
               round_agents!inner(
                 agents(
                   id,
@@ -32,10 +32,15 @@ const RoomsPage: FC = () => {
             )
           `
           )
-          .eq("rounds.active", true)
+          // .eq("rounds.active", true)
+          // .order("rounds.created_at", { ascending: false })
+          // .limit(1, { foreignTable: "rounds" })
           .throwOnError();
 
-        if (error) throw error;
+        if (error) {
+          console.error("Error loading rooms:", error);
+          throw error;
+        }
 
         // Transform the data to match our expected format
         const transformedRooms: RoomWithRelations[] = roomsData.map(
