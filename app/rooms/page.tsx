@@ -17,11 +17,17 @@ const RoomsPage: FC = () => {
           .from("rooms")
           .select(
             `
-            *,
+            id,
+            name,
+            type_id,
+            image_url,
+            color,
             rounds!inner(
               id,
+              active,
+              round_config,
               round_agents!inner(
-                agents(
+                agent:agent_id(
                   id,
                   display_name,
                   image_url,
@@ -29,7 +35,7 @@ const RoomsPage: FC = () => {
                 )
               )
             )
-          `
+         `
           )
           .eq("rounds.active", true)
           .throwOnError();
@@ -43,10 +49,10 @@ const RoomsPage: FC = () => {
             participants: room.participants?.[0]?.count ?? 0,
             agents:
               room.rounds?.[0]?.round_agents?.map((ra: any) => ({
-                id: ra.agents.id,
-                displayName: ra.agents.display_name,
-                image: ra.agents.image_url,
-                color: ra.agents.color,
+                id: ra.agent.id,
+                displayName: ra.agent.display_name,
+                image: ra.agent.image_url,
+                color: ra.agent.color,
               })) ?? [],
           })
         );

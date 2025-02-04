@@ -8,6 +8,7 @@ export enum WsMessageType {
   AI_CHAT = "ai_chat",
   PVP_ACTION = "pvp_action",
   OBSERVATION = "observation",
+  PARTICIPANTS = "participants",
 }
 
 export interface WSMessageInput {

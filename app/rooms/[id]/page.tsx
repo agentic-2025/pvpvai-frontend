@@ -1,14 +1,11 @@
 "use client";
 
 import Loader from "@/components/loader";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { WSMessageOutput, WsMessageType } from "@/lib/backend.types";
 import supabase from "@/lib/config";
 import { AgentChat } from "@/stories/AgentChat";
 import { BuySellGameAvatarInteraction } from "@/stories/BuySellGameAvatarInteraction";
-import { RoomWithRelations } from "@/stories/RoomTable";
-import { motion } from "framer-motion";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import useWebSocket, { ReadyState } from "react-use-websocket";
@@ -20,7 +17,7 @@ export default function RoomDetailPage() {
   const roomId = parseInt(id);
 
   // State for room details (common data)
-  const [roomData, setRoomData] = useState<RoomWithRelations | null>(null);
+  const [roomData, setRoomData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
   // Separate states for public chat and agent messages
@@ -57,29 +54,7 @@ export default function RoomDetailPage() {
   const fetchRoomDetails = async (roomId: number) => {
     const { data, error } = await supabase
       .from("rooms")
-      .select(
-        `
-        id,
-        name,
-        type_id,
-        image_url,
-        color,
-        active,
-        chain_family,
-        contract_address,
-        round_time,
-        round_ends_on,
-        creator_id,
-        game_master_id,
-        game_master_action_log,
-        pvp_action_log,
-        room_config,
-        created_at,
-        updated_at,
-        chain_id,
-        participants:user_rooms(count)
-      `
-      )
+      .select(`*`)
       .eq("id", roomId)
       .single();
     if (error) throw error;
@@ -189,12 +164,8 @@ export default function RoomDetailPage() {
     const loadData = async () => {
       try {
         const room = await fetchRoomDetails(roomId);
-        const totalParticipants = room.participants?.[0]?.count ?? 0;
         setRoomData({
           ...room,
-          participants: totalParticipants,
-          agents: [],
-          roundNumber: 0,
         });
 
         const roundsData = await fetchRoundList(roomId);
@@ -288,27 +259,36 @@ export default function RoomDetailPage() {
         }
         console.log("event data type", data.type);
 
-        if (data.type === WsMessageType.PUBLIC_CHAT) {
+        if (
+          data.type === WsMessageType.PUBLIC_CHAT ||
+          data.type === WsMessageType.SYSTEM_NOTIFICATION ||
+          data.type === WsMessageType.PARTICIPANTS
+        ) {
+          // For PUBLIC_CHAT, SYSTEM_NOTIFICATION, or PARTICIPANTS,
+          // we create a message object to be handled by the public chat.
+          let publicMessage;
+          if (data.type === WsMessageType.PARTICIPANTS) {
+            publicMessage = {
+              type: data.type,
+              message: `Participants: ${data.content.count}`,
+              _timestamp: Date.now(),
+              content: data.content,
+            };
+          } else {
+            publicMessage = {
+              type: data.type,
+              message: normalizeMessage(data),
+              _timestamp: Date.now(),
+              content: data.content,
+            };
+          }
           setMessages((prev) => {
-            const newMessageId = data.content?.message_id;
-            const alreadyExists = newMessageId
-              ? prev.some((msg) => msg.content?.message_id === newMessageId)
-              : false;
-            if (alreadyExists) return prev;
-            const updated = [
-              ...prev,
-              {
-                ...data,
-                _timestamp: Date.now(),
-                message: normalizeMessage(data),
-              },
-            ];
+            const updated = [...prev, publicMessage];
             return updated.length > 50
               ? updated.slice(updated.length - 50)
               : updated;
           });
-        }
-        if (
+        } else if (
           data.type === WsMessageType.AI_CHAT ||
           data.type === WsMessageType.GM_ACTION ||
           data.type === WsMessageType.PVP_ACTION ||
@@ -332,28 +312,6 @@ export default function RoomDetailPage() {
               ? updated.slice(updated.length - 50)
               : updated;
           });
-        }
-        if (data.type === WsMessageType.SYSTEM_NOTIFICATION) {
-          if (data.content.error) {
-            toast({
-              variant: "destructive",
-              title: "Encountered an error",
-              description: data.content.text,
-            });
-            setMessages((prev) => {
-              const updated = [
-                ...prev,
-                {
-                  ...data,
-                  _timestamp: Date.now(),
-                  message: normalizeMessage(data),
-                },
-              ];
-              return updated.length > 50
-                ? updated.slice(updated.length - 50)
-                : updated;
-            });
-          }
         }
       },
       onClose: () => {
@@ -388,12 +346,7 @@ export default function RoomDetailPage() {
 
   // Filter for public messages to display.
   const publicMessages = messages.filter(
-    (msg) => msg.type === WsMessageType.PUBLIC_CHAT
-  );
-
-  // Combine public messages and agent messages, sorted by timestamp.
-  const combinedMessages = [...publicMessages, ...agentMessages].sort(
-    (a, b) => a._timestamp - b._timestamp
+    (msg) => msg.type === WsMessageType.PUBLIC_CHAT || WsMessageType.SYSTEM_NOTIFICATION || WsMessageType.PARTICIPANTS
   );
 
   if (loading) return <Loader />;
@@ -426,7 +379,7 @@ export default function RoomDetailPage() {
               <div className="bg-[#262626] flex items-center justify-center h-full rounded-md">
                 <div className="flex flex-wrap justify-center items-center gap-10">
                   {roomData.agents.length > 0 ? (
-                    roomData.agents.map((agent) => (
+                    roomData.agents.map((agent: any) => (
                       <BuySellGameAvatarInteraction
                         key={agent.id}
                         id={agent.id}

@@ -820,22 +820,29 @@ export function CreateRoomModal({
 
   const canProceedToNextStep = () => {
     switch (createRoomFormState.step) {
-      case 2:
+      case 2: // Room Type
         return !!createRoomFormState.roomType;
-      case 3:
+      case 3: // Chain
         return !!chain;
-      case 4:
+      case 4: // Agents
         return createRoomFormState.selectedAgents.length > 0;
-      case 5:
+      case 5: // Room Settings
+        if (createRoomFormState.roomType === 3 || 4) {
+          return true;
+        }
         return !!(settings.name && settings.image_url);
-      case 6:
+      case 6: // Type Specific Settings
+        if (createRoomFormState.roomType === 3 || 4) {
+          return true;
+        }
         return !!tokenInfo;
-      case 7:
+      case 7: // PvP Settings (if applicable)
         return true;
       default:
         return true;
     }
   };
+  
 
   const getStepTitle = () => {
     const stepName = (() => {
