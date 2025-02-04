@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import  supabase  from "@/lib/config";
+import supabase from "@/lib/config";
 import { Tables } from "@/lib/database.types";
 import { cn, generateRandomColor, getChainMetadata } from "@/lib/utils";
 import { OnchainKitProvider } from "@coinbase/onchainkit";
@@ -122,62 +122,41 @@ export function CreateRoomModal({
     setCreateRoomFormState((s) => ({ ...s, settings: newSettings }));
   };
 
-  // Add this effect at component level
+  // Fetch room types
   useEffect(() => {
     const fetchRoomTypes = async () => {
       const { data, error } = await supabase
         .from("room_types")
         .select("*")
         .order("id");
-
       if (error) {
         console.error("Error fetching room types:", error);
         return;
       }
-
       setRoomTypes(data || []);
       setLoadingRoomTypes(false);
     };
-
     fetchRoomTypes();
   }, []);
 
-  // Add this effect alongside other effects
+  // Fetch agents
   useEffect(() => {
     const fetchAgents = async () => {
       const { data, error } = await supabase
         .from("agents")
         .select("*")
         .order("created_at", { ascending: false });
-
       if (error) {
         console.error("Error fetching agents:", error);
         return;
       }
-
       setAgents(data || []);
       setLoadingAgents(false);
     };
-
     fetchAgents();
   }, []);
 
-  // Add useEffect for initial config
-  // const handleChange = useCallback((value: string) => {
-  //   async function getData(value: string) {
-  //     const tokens = await getTokens({ search: value });
-  //     // Do something with tokens here
-  //     if ("message" in tokens) {
-  //       console.log("error callback", tokens);
-
-  //       setTokenError(tokens.message);
-  //     } else {
-  //       setTokenSearchResults(tokens);
-  //     }
-  //   }
-  //   getData(value);
-  // }, []);
-
+  // Load token info (using onchainkit)
   useEffect(() => {
     const loadTokenInfo = async (address: string) => {
       if (tokenSearchQuery) {
@@ -208,33 +187,49 @@ export function CreateRoomModal({
     if (!createRoomFormState.settings) return;
 
     const chainMeta = getChainMetadata(chain.id);
+    // Compute roundEndsOn as current time plus round_time (in seconds)
+    const roundEndsOn = new Date(
+      Date.now() + createRoomFormState.settings.round_time * 1000
+    ).toISOString();
 
     const payload = {
       name: createRoomFormState.settings.name,
-      type_id: createRoomFormState.roomType,
-      image_url: createRoomFormState.settings.image_url,
+      room_type: createRoomFormState.roomType === 1 ? "buy_sell" : "chat",
+      image_url:
+        createRoomFormState.settings.image_url &&
+        createRoomFormState.settings.image_url.startsWith("http")
+          ? createRoomFormState.settings.image_url
+          : "https://example.com/default-room.png",
       color: createRoomFormState.settings.color,
-      chain_id: chain.id,
+      chain_id: String(chain.id),
       chain_family: chainMeta.family,
-      contract_address: "0x1234...", // Mock address
+      contract_address: "0x1234...", // Replace with actual contract address if needed.
+      // Optional top-level round_time if desired.
       round_time: createRoomFormState.settings.round_time,
       room_config: {
+        round_duration: createRoomFormState.settings.round_time,
+        round_ends_on: roundEndsOn,
+        pvp_config: {
+          enabled: createRoomFormState.pvpEnabled,
+          allowed_functions: createRoomFormState.pvpRules, // Added allowed_functions
+          enabled_rules: createRoomFormState.pvpRules,
+        },
         features: {
           public_chat: true,
         },
-        token: {
-          address: tokenInfo?.address,
-          chainId: tokenInfo?.chainId,
-          decimals: tokenInfo?.decimals,
-          image: tokenInfo?.image,
-          name: tokenInfo?.name,
-          symbol: tokenInfo?.symbol,
-        },
-        pvp: {
-          enabled: createRoomFormState.pvpEnabled,
-          allowed_functions: createRoomFormState.pvpRules,
+      },
+      // token must be a valid wallet address per the regex.
+      token: tokenInfo?.address || "0x0000000000000000000000000000000000000000",
+      token_webhook: "https://example.com/webhook", // Must be a valid URL.
+      // agents: the schema expects an object mapping keys to an object with wallet and webhook.
+      agents: {
+        default: {
+          wallet: "0x0000000000000000000000000000000000000000", // Fallback wallet address.
+          webhook: "https://example.com/agent-webhook", // Fallback webhook URL.
         },
       },
+      gm: "0x0000000000000000000000000000000000000000", // Fallback GM wallet address.
+      transaction_hash: "0x" + "0".repeat(64), // Fallback transaction hash.
     };
 
     try {
@@ -264,8 +259,6 @@ export function CreateRoomModal({
     return (
       <div className="flex flex-col h-full">
         <div className="flex-1 overflow-y-auto p-6">{renderStepContent()}</div>
-
-        {/* Navigation - fixed at bottom */}
         <div className="flex justify-between p-6 border-t border-border bg-background">
           <button
             className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -322,7 +315,6 @@ export function CreateRoomModal({
         </div>
       );
     }
-
     return (
       <div className="grid grid-cols-1 gap-4">
         {roomTypes.map((type) => (
@@ -359,31 +351,24 @@ export function CreateRoomModal({
             selected={chain.id === baseSepolia.id}
             className="bg-[#0052FF] w-full h-[60px]"
             iconClassName="w-[160px] h-[40px]"
-            onClick={() => {
-              setChain(baseSepolia);
-            }}
+            onClick={() => setChain(baseSepolia)}
           />
           <ChainButton
             iconUrl={arbitrumIcon.src}
             selected={chain.id === arbitrumSepolia.id}
             className="bg-[#28A0F0] w-full h-[60px]"
             iconClassName="w-[160px] h-[40px]"
-            onClick={() => {
-              setChain(arbitrumSepolia);
-            }}
+            onClick={() => setChain(arbitrumSepolia)}
           />
           <ChainButton
             iconUrl={flowIcon.src}
             selected={chain.id === flowTestnet.id}
             className="bg-[#00EF8B] w-full h-[60px]"
             iconClassName="w-[160px] h-[40px]"
-            onClick={() => {
-              setChain(flowTestnet);
-            }}
+            onClick={() => setChain(flowTestnet)}
           />
           <ChainButton
             iconUrl={solanaIcon.src}
-            // selected={chain.id === solana.id}
             selected={false}
             className="bg-[#512DA8] w-full h-[60px] opacity-50 cursor-not-allowed"
             iconClassName="w-[160px] h-[40px]"
@@ -396,31 +381,24 @@ export function CreateRoomModal({
             selected={chain.id === base.id}
             className="bg-[#0052FF] w-full h-[60px]"
             iconClassName="w-[160px] h-[40px]"
-            onClick={() => {
-              setChain(base);
-            }}
+            onClick={() => setChain(base)}
           />
           <ChainButton
             iconUrl={arbitrumIcon.src}
             selected={chain.id === arbitrum.id}
             className="bg-[#28A0F0] w-full h-[60px]"
             iconClassName="w-[160px] h-[40px]"
-            onClick={() => {
-              setChain(arbitrum);
-            }}
+            onClick={() => setChain(arbitrum)}
           />
           <ChainButton
             iconUrl={flowIcon.src}
             selected={chain.id === flowMainnet.id}
             className="bg-[#00EF8B] w-full h-[60px]"
             iconClassName="w-[160px] h-[40px]"
-            onClick={() => {
-              setChain(flowMainnet);
-            }}
+            onClick={() => setChain(flowMainnet)}
           />
           <ChainButton
             iconUrl={solanaIcon.src}
-            // selected={chain.id === solana.id}
             selected={false}
             className="bg-[#512DA8] w-full h-[60px] opacity-50 cursor-not-allowed"
             iconClassName="w-[160px] h-[40px]"
@@ -442,11 +420,7 @@ export function CreateRoomModal({
           : s.selectedAgents.length < 5
           ? [...s.selectedAgents, agentId]
           : s.selectedAgents;
-
-        return {
-          ...s,
-          selectedAgents: newSelectedAgents,
-        };
+        return { ...s, selectedAgents: newSelectedAgents };
       });
     };
 
@@ -483,16 +457,12 @@ export function CreateRoomModal({
             {createRoomFormState.selectedAgents.length}/5 selected
           </span>
         </div>
-
-        {/* Search */}
         <Input
           placeholder="Search agents..."
           value={searchAgentQuery}
           onChange={(e) => setSearchAgentQuery(e.target.value)}
           className="bg-muted border-border"
         />
-
-        {/* Agent Grid */}
         <ScrollArea className="h-[400px] rounded-md border border-border">
           <div className="p-4">
             {loadingAgents ? (
@@ -543,7 +513,6 @@ export function CreateRoomModal({
 
     return (
       <div className="flex flex-col gap-6">
-        {/* Name */}
         <div className="space-y-2">
           <Label htmlFor="name">Room Name</Label>
           <Input
@@ -554,8 +523,6 @@ export function CreateRoomModal({
             className="bg-muted border-border"
           />
         </div>
-
-        {/* Image URL */}
         <div className="space-y-2">
           <Label htmlFor="image_url">Room Image URL</Label>
           <Input
@@ -564,12 +531,10 @@ export function CreateRoomModal({
             onChange={(e) =>
               handleSettingsChange({ image_url: e.target.value })
             }
-            placeholder="Enter image URL"
+            placeholder="Enter room image URL"
             className="bg-muted border-border"
           />
         </div>
-
-        {/* Color Settings */}
         <div>
           <ColorPicker
             label="Room Color"
@@ -580,8 +545,6 @@ export function CreateRoomModal({
             }
           />
         </div>
-
-        {/* Round Time */}
         <div className="space-y-2">
           <Label>Round Time</Label>
           <div className="flex gap-2">
@@ -632,7 +595,6 @@ export function CreateRoomModal({
         >
           <div className="flex flex-col gap-6">
             <div className="space-y-4">
-              {/* <TokenSearch onChange={handleChange} delayMs={200} /> */}
               {tokenInfo ? (
                 <div className="w-4/6 mx-auto">
                   <div className="flex justify-center items-stretch gap-4 py-4 px-3 border-2 border-gray-400 rounded-lg">
@@ -664,7 +626,6 @@ export function CreateRoomModal({
                   </div>
                 </div>
               )}
-              {/* Search Input */}
               <div className="flex gap-2">
                 <Input
                   id="tokenAddress"
@@ -713,7 +674,6 @@ export function CreateRoomModal({
         </OnchainKitProvider>
       );
     }
-
     return null;
   };
 
@@ -738,7 +698,6 @@ export function CreateRoomModal({
 
     return (
       <div className="flex flex-col gap-6">
-        {/* PvP Toggle */}
         <div className="flex justify-center">
           <div
             className={cn(
@@ -768,7 +727,6 @@ export function CreateRoomModal({
         </div>
 
         <ScrollArea className="h-[500px] pr-4">
-          {/* Low Impact Rules */}
           <div className="space-y-4 p-4">
             <h3 className="text-lg font-medium text-gray-300">
               Low Impact Rules
@@ -792,7 +750,6 @@ export function CreateRoomModal({
             </div>
           </div>
 
-          {/* Moderate Impact Rules */}
           <div className="space-y-4 mt-8 p-4">
             <h3 className="text-lg font-medium text-gray-300">
               Moderate Impact Rules
@@ -816,7 +773,6 @@ export function CreateRoomModal({
             </div>
           </div>
 
-          {/* High Impact Rules */}
           <div className="space-y-4 mt-8 p-4">
             <h3 className="text-lg font-medium text-gray-300">
               High Impact Rules
@@ -848,13 +804,13 @@ export function CreateRoomModal({
     return (
       <div className="flex flex-col gap-6">
         <div className="p-4 text-foreground rounded-lg border-2 border-gray-400 flex flex-col gap-2 text-center">
-          <div className={"text-muted-foreground "}>
+          <div className="text-muted-foreground">
             Creating this room will cost
           </div>
           <div className="text-foreground text-xl">
             0.1 {chain.nativeCurrency.symbol}
           </div>
-          <div className={"text-sm text-muted-foreground "}>
+          <div className="text-sm text-muted-foreground">
             2% of all fees generated in room will go to you
           </div>
         </div>
@@ -862,20 +818,19 @@ export function CreateRoomModal({
     );
   };
 
-  // Add helper function to determine if we can proceed to next step
   const canProceedToNextStep = () => {
     switch (createRoomFormState.step) {
-      case 2: // Room Type
+      case 2:
         return !!createRoomFormState.roomType;
-      case 3: // Chain
+      case 3:
         return !!chain;
-      case 4: // Agents
+      case 4:
         return createRoomFormState.selectedAgents.length > 0;
-      case 5: // Room Settings
+      case 5:
         return !!(settings.name && settings.image_url);
-      case 6: // Type Specific Settings
+      case 6:
         return !!tokenInfo;
-      case 7: // PvP Settings
+      case 7:
         return true;
       default:
         return true;
