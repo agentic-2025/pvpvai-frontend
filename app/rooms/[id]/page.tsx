@@ -2,14 +2,15 @@
 
 import Loader from "@/components/loader";
 import { useToast } from "@/hooks/use-toast";
-import { WSMessageOutput, WsMessageType } from "@/lib/backend.types";
+import { AllOutputSchemaTypes, WsMessageTypes } from "@/lib/backend.types";
 import supabase from "@/lib/config";
 import { AgentChat } from "@/stories/AgentChat";
 import { BuySellGameAvatarInteraction } from "@/stories/BuySellGameAvatarInteraction";
+import { PublicChat, PublicChatMessage } from "@/stories/PublicChat";
+import { RoomWithRelations } from "@/stories/RoomTable";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import useWebSocket, { ReadyState } from "react-use-websocket";
-import { PublicChat, PublicChatMessage } from "@/stories/PublicChat";
 
 export default function RoomDetailPage() {
   const params = useParams();
@@ -54,7 +55,10 @@ export default function RoomDetailPage() {
   const fetchRoomDetails = async (roomId: number) => {
     const { data, error } = await supabase
       .from("rooms")
-      .select(`*`)
+      .select(
+        `*
+      `
+      )
       .eq("id", roomId)
       .single();
     if (error) throw error;
@@ -114,7 +118,7 @@ export default function RoomDetailPage() {
           _timestamp: msg.created_at
             ? new Date(msg.created_at).getTime()
             : Date.now(),
-          type: msg.message_type || WsMessageType.GM_ACTION,
+          type: msg.message_type || WsMessageTypes.GM_ACTION,
         })) ?? [];
 
       // Process public user messages from round_user_messages.
@@ -128,7 +132,7 @@ export default function RoomDetailPage() {
             : Date.now(),
           source: "api",
           content: msg.content || {},
-          type: WsMessageType.PUBLIC_CHAT,
+          type: WsMessageTypes.PUBLIC_CHAT,
         })) ?? [];
       processedUserMsgs.sort((a, b) => a._timestamp - b._timestamp);
 
@@ -166,6 +170,8 @@ export default function RoomDetailPage() {
         const room = await fetchRoomDetails(roomId);
         setRoomData({
           ...room,
+          agents: [],
+          roundNumber: 0,
         });
 
         const roundsData = await fetchRoundList(roomId);
@@ -210,7 +216,7 @@ export default function RoomDetailPage() {
   // --- WebSocket Logic ---
   const socketUrl = `${process.env.NEXT_PUBLIC_BACKEND_WS_URL}`;
   const { sendMessage, readyState, getWebSocket } =
-    useWebSocket<WSMessageOutput>(socketUrl, {
+    useWebSocket<AllOutputSchemaTypes>(socketUrl, {
       shouldReconnect: () => {
         const ws = getWebSocket();
         const retries = (ws as any)?.retries || 0;
@@ -234,7 +240,7 @@ export default function RoomDetailPage() {
         (ws as any).retries = 0;
         sendMessage(
           JSON.stringify({
-            type: WsMessageType.SUBSCRIBE_ROOM,
+            type: WsMessageTypes.SUBSCRIBE_ROOM,
             author: currentUserId,
             timeStamp: Date.now(),
             content: { roomId },
@@ -259,40 +265,20 @@ export default function RoomDetailPage() {
         }
         console.log("event data type", data.type);
 
-        if (
-          data.type === WsMessageType.PUBLIC_CHAT ||
-          data.type === WsMessageType.SYSTEM_NOTIFICATION ||
-          data.type === WsMessageType.PARTICIPANTS
-        ) {
-          // For PUBLIC_CHAT, SYSTEM_NOTIFICATION, or PARTICIPANTS,
-          // we create a message object to be handled by the public chat.
-          let publicMessage;
-          if (data.type === WsMessageType.PARTICIPANTS) {
-            publicMessage = {
-              type: data.type,
-              message: `Participants: ${data.content.count}`,
-              _timestamp: Date.now(),
-              content: data.content,
-            };
-          } else {
-            publicMessage = {
-              type: data.type,
-              message: normalizeMessage(data),
-              _timestamp: Date.now(),
-              content: data.content,
-            };
-          }
+        if (data.type === WsMessageTypes.PUBLIC_CHAT) {
           setMessages((prev) => {
             const updated = [...prev, publicMessage];
             return updated.length > 50
               ? updated.slice(updated.length - 50)
               : updated;
           });
-        } else if (
-          data.type === WsMessageType.AI_CHAT ||
-          data.type === WsMessageType.GM_ACTION ||
-          data.type === WsMessageType.PVP_ACTION ||
-          data.type === WsMessageType.OBSERVATION
+        }
+        if (
+          data.type === WsMessageTypes.AI_CHAT_AGENT_MESSAGE ||
+          data.type === WsMessageTypes.GM_MESSAGE ||
+          data.type === WsMessageTypes.AI_CHAT_PVP_ACTION_ENACTED ||
+          data.type === WsMessageTypes.AI_CHAT_PVP_STATUS_REMOVED ||
+          data.type === WsMessageTypes.OBSERVATION
         ) {
           console.log("Agent message received:", data);
           setAgentMessages((prev) => {
@@ -312,6 +298,28 @@ export default function RoomDetailPage() {
               ? updated.slice(updated.length - 50)
               : updated;
           });
+        }
+        if (data.type === WsMessageTypes.SYSTEM_NOTIFICATION) {
+          if (data.content.error) {
+            toast({
+              variant: "destructive",
+              title: "Encountered an error",
+              description: data.content.text,
+            });
+            setMessages((prev) => {
+              const updated = [
+                ...prev,
+                {
+                  ...data,
+                  _timestamp: Date.now(),
+                  message: normalizeMessage(data),
+                },
+              ];
+              return updated.length > 50
+                ? updated.slice(updated.length - 50)
+                : updated;
+            });
+          }
         }
       },
       onClose: () => {
@@ -346,7 +354,7 @@ export default function RoomDetailPage() {
 
   // Filter for public messages to display.
   const publicMessages = messages.filter(
-    (msg) => msg.type === WsMessageType.PUBLIC_CHAT || WsMessageType.SYSTEM_NOTIFICATION || WsMessageType.PARTICIPANTS
+    (msg) => msg.type === WsMessageTypes.PUBLIC_CHAT
   );
 
   if (loading) return <Loader />;
