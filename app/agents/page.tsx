@@ -14,16 +14,15 @@ import { Card } from "@/components/ui/card";
 import supabase from "@/lib/config";
 import { AgentAvatar } from "@/stories/AgentAvatar";
 import { formatDistanceToNow } from "date-fns";
-import {
-  ClipboardCopy,
-  ChevronLeft,
-  ChevronRight,
-  DollarSign,
-} from "lucide-react"; // Icons
+import { ClipboardCopy, ChevronLeft, ChevronRight } from "lucide-react"; // Icons
 import usdcIcon from "@/stories/assets/crypto/usdc.svg";
 import Image from "next/image";
 import autonomeIcon from "@/stories/assets/ai/autonome-full.svg";
+import gaiaIcon from "@/stories/assets/ai/gaia.png";
+import localIcon from "@/stories/assets/ai/server.png";
+
 import CreateAgentDialog from "@/stories/CreateAgentDialog";
+import Link from "next/link";
 
 export type Agent = {
   id: number;
@@ -31,13 +30,14 @@ export type Agent = {
   image_url: string | null;
   color: string;
   eth_wallet_address: string;
-  deployed_to: string; // Changed from platform to deployed_to
+  deployed_to: string;
+  platform: string;
   status: "Active" | "Down";
   last_health_check: string;
-  earnings: number; // Lifetime earnings
+  earnings: number;
 };
 
-const agentCategories = ["All", "Active", "Inactive"];
+const agentCategories = ["Active", "Inactive"];
 const PAGE_SIZE = 10; // Default 10 agents per page
 
 export default function AgentsPage() {
@@ -50,7 +50,10 @@ export default function AgentsPage() {
   useEffect(() => {
     const fetchAgents = async () => {
       setLoading(true);
-      const { data, error } = await supabase.from("agents").select("*");
+      const { data, error } = await supabase
+        .from("agents")
+        .select("*")
+        .order("id", { ascending: false });
 
       if (error) {
         console.error("Error fetching agents:", error);
@@ -71,7 +74,7 @@ export default function AgentsPage() {
   }, []);
 
   useEffect(() => {
-    // Filter agents based on selected category
+    // Filter agents based on selected category ("Active" or "Inactive")
     let filtered = agents;
     if (selectedCategory === "Active") {
       filtered = agents.filter((agent) => agent.status === "Active");
@@ -91,8 +94,10 @@ export default function AgentsPage() {
   const startIdx = (currentPage - 1) * PAGE_SIZE;
   const displayedAgents = filteredAgents.slice(startIdx, startIdx + PAGE_SIZE);
 
-  const handlePageChange = (newPage) => {
-    setCurrentPage(newPage);
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
   };
 
   return (
@@ -166,15 +171,18 @@ export default function AgentsPage() {
                 <TableRow key={agent.id} className="hover:bg-secondary/20">
                   {/* Agent Column with Avatar & Name */}
                   <TableCell className="text-lg pl-6 font-medium">
-                    <div className="flex items-center gap-3">
+                    <Link
+                      href={`/agents/${agent.id}`}
+                      className="flex items-center gap-3"
+                    >
                       <AgentAvatar
                         name={agent.display_name}
                         imageUrl={agent.image_url || ""}
                         borderColor={agent.color}
                         variant="sm"
                       />
-                      <span>{agent.display_name || "N/A"}</span>
-                    </div>
+                      {agent.display_name}
+                    </Link>
                   </TableCell>
 
                   {/* Wallet Address */}
@@ -217,18 +225,24 @@ export default function AgentsPage() {
                   </TableCell>
 
                   {/* Deployed To */}
-                  <TableCell className="text-lg text-center text-gray-900 dark:text-gray-300">
-                    <Image
-                      src={autonomeIcon}
-                      alt="alt"
-                      className="h-6 w-fit mx-auto"
-                    />
-                  </TableCell>
+                    <TableCell className="text-lg text-center text-gray-900 dark:text-gray-300">
+                      <Image
+                        src={
+                          agent.platform === "Autonome"
+                            ? autonomeIcon
+                            : agent.platform === "Gaia"
+                            ? gaiaIcon
+                            : localIcon
+                        }
+                        alt={`Deployed to ${agent.platform}`}
+                        className="h-6 w-fit mx-auto"
+                      />
+                    </TableCell>
 
                   {/* Lifetime Earnings */}
                   <TableCell className="text-lg text-center text-gray-900 dark:text-gray-300">
                     <div className="flex items-center justify-center gap-1">
-                      <Image src={usdcIcon} alt="alt" className="size-6" />
+                      <Image src={usdcIcon} alt="USDC" className="size-6" />
                       {agent.earnings.toFixed(0)} USDC
                     </div>
                   </TableCell>
@@ -242,7 +256,7 @@ export default function AgentsPage() {
       {/* Pagination */}
       <div className="flex justify-center items-center mt-4">
         <ChevronLeft
-          className="cursor-pointer "
+          className="cursor-pointer"
           onClick={() => handlePageChange(currentPage - 1)}
           aria-disabled={currentPage === 1}
         />
