@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/table";
 import { Tables } from "@/lib/database.types";
 import { CreateRoomModal } from "./CreateRoomModal";
+import { useAccount } from "wagmi";
+import { Button } from "@/components/ui/button";
 
 export type Agent = Tables<"agents">;
 export type Room = Tables<"rooms">;
@@ -84,6 +86,8 @@ export function RoomTable({
   // Determine if Buy Sell rooms are selected
   const isBuySell = selectedType === "Buy / Hold / Sell";
 
+  const { isConnected } = useAccount();
+
   // Filter rooms based on the selected room type
   const filteredRooms =
     selectedType === "All"
@@ -139,12 +143,13 @@ export function RoomTable({
             </div>
           </div>
         )}
-        <button
+        <Button
           onClick={() => setCreateRoomOpen(true)}
+          disabled={!isConnected}
           className="px-4 py-2 h-fit bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
         >
           Create Room
-        </button>
+        </Button>
       </div>
 
       <div
