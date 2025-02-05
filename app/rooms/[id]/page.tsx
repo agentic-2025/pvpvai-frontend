@@ -19,7 +19,6 @@ import {
 } from "@/lib/queries/messageQueries";
 import { AgentChat } from "@/stories/AgentChat";
 import { BuySellGameAvatarInteraction } from "@/stories/BuySellGameAvatarInteraction";
-import { PublicChat } from "@/stories/PublicChat";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useState } from "react";
@@ -470,7 +469,7 @@ export default function RoomDetailPage() {
             />
             {/* Public Chat: shows streaming public messages */}
             <div className="flex flex-col bg-card rounded-lg p-4 overflow-y-auto h-full">
-              <PublicChat
+              {/* <PublicChat
                 messages={[...(roundPublicChatMessages || []), ...messages]}
                 className="h-full"
                 currentUserAddress={String(currentUserId)}
@@ -479,7 +478,7 @@ export default function RoomDetailPage() {
                   // Optionally: implement sending message logic here.
                   console.log("User sending message:", message);
                 }}
-              />
+              /> */}
             </div>
           </div>
         </div>
