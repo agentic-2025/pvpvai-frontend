@@ -80,7 +80,7 @@ body {
 :root,
 html,
 body {
-  @apply bg-neutral-500;
+  @apply bg-neutral-500 w-[95%] mx-auto scroll-thin;
 }
 .scroll-thin::-webkit-scrollbar {
   width: 5px;

@@ -46,8 +46,8 @@ export function Navbar({ className, navItems }: NavbarProps) {
   const items = navItems || defaultNavItems;
 
   return (
-    <nav className={cn("border-b", className)}>
-      <div className="container mx-auto flex h-16 items-center gap-x-10">
+    <nav className={cn("", className)}>
+      <div className="container mx-auto flex h-20 items-center gap-x-10 border-b">
         <Link href="/" className="flex items-center">
           <Image
             src={logo.src}
