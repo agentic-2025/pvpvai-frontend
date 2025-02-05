@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import logo from "@/public/logo.svg";
-import LoginButton from "@/components/privy-login-button";
+import { WalletDefault } from "@coinbase/onchainkit/wallet";
 
 export interface NavItem {
   href: string;
@@ -23,7 +23,8 @@ export function Navbar({ className, navItems }: NavbarProps) {
   const pathname = usePathname();
 
   // Define default active and inactive classes.
-  const defaultActiveClass = "bg-primary text-primary-foreground hover:text-primary-foreground/80 px-3 py-1 rounded-md";
+  const defaultActiveClass =
+    "bg-primary text-primary-foreground hover:text-primary-foreground/80 px-3 py-1 rounded-md";
   const defaultInactiveClass = "text-muted-foreground";
 
   // Default nav items if not provided, with default active/inactive classes.
@@ -74,7 +75,7 @@ export function Navbar({ className, navItems }: NavbarProps) {
           ))}
         </div>
         <div className="ml-auto pr-4">
-          <LoginButton />
+          <WalletDefault />
         </div>
       </div>
     </nav>
