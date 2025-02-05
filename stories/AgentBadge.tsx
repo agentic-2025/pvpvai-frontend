@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import {
   Tooltip,
   TooltipContent,
@@ -12,7 +12,7 @@ import { AgentAvatar } from "./AgentAvatar";
 import { PlayerAddressChip } from "./PlayerAddressChip";
 
 interface AgentBadgeProps {
-  id: string;
+  id: number;
   name: string;
   color: string;
   borderColor?: string;
@@ -70,31 +70,39 @@ export const AgentBadge: FC<AgentBadgeProps> = ({
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Link href={`/agent/${id}`} className="group">
-            <div
-              className={cn(
-                "rounded-full font-medium transition-colors inline-flex items-center",
-                styles.padding,
-                styles.text,
-                styles.gap,
-                "group-hover:underline"
-              )}
-              style={{
-                backgroundColor: color,
-                color: isLightColor(color) ? "black" : "white",
-              }}
-            >
-              {avatar && (
-                <AgentAvatar
-                  name={name}
-                  borderColor={borderColor || color}
-                  imageUrl={avatar}
-                  variant={styles.avatar}
-                />
-              )}
-              {displayName}
-            </div>
-          </Link>
+          {(() => {
+            const content = (
+              <div
+                className={cn(
+                  "rounded-full font-medium transition-colors inline-flex items-center",
+                  styles.padding,
+                  styles.text,
+                  styles.gap,
+                  id !== 0 && "group-hover:underline"
+                )}
+                style={{
+                  backgroundColor: color,
+                  color: isLightColor(color) ? "black" : "white",
+                }}
+              >
+                {avatar && (
+                  <AgentAvatar
+                    name={name}
+                    borderColor={borderColor || color}
+                    imageUrl={avatar}
+                    variant={styles.avatar}
+                  />
+                )}
+                {displayName}
+              </div>
+            );
+
+            return id === 0 ? content : (
+              <Link href={`/agent/${id}`} className="group">
+                {content}
+              </Link>
+            );
+          })()}
         </TooltipTrigger>
         <TooltipContent
           side="bottom"

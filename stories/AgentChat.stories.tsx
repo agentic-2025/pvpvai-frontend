@@ -1,101 +1,302 @@
+import {
+  agentMessageAiChatOutputSchema,
+  gmMessageAiChatOutputSchema,
+  pvpActionEnactedAiChatOutputSchema,
+  WsMessageTypes,
+} from "@/lib/backend.types";
+import { Tables } from "@/lib/database.types";
+import { PvpActionCategories, PvpActions } from "@/lib/pvp.types";
 import type { Meta, StoryObj } from "@storybook/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactNode } from "react";
+import { z } from "zod";
 import { AgentChat } from "./AgentChat";
-import chatgptIcon from "./assets/ai/chatgpt-color.svg";
-import claudeIcon from "./assets/ai/claude.svg";
 import gm from "./assets/gm.png";
 import gavel from "./assets/pvp/gavel.svg";
-import knife from "./assets/pvp/knife.svg";
-import poison from "./assets/pvp/poison.svg";
-import pvpIcon from "./assets/pvp/pvp-color2.svg";
-import { PlayerAddressChip } from "./PlayerAddressChip";
+
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // For Storybook, disable retries and keep cache for longer
+      retry: false,
+      staleTime: Infinity,
+      gcTime: Infinity,
+    },
+  },
+});
+
+// Create a wrapper component
+const QueryWrapper = ({ children }: { children: ReactNode }) => (
+  <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+);
 
 const demoAddress = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e";
+const timestamp = new Date().toISOString();
 
-const MESSAGES = [
+const MESSAGES: Tables<"round_agent_messages">[] = [
   {
-    agentName: "Mama (GM)",
-    agentImageUrl: gm.src,
-    agentBorderColor: "#D4AF37",
-    message: "Welcome to the game! Let the mayhem begin...",
-    showSentiment: false,
-    isGM: true,
-    creatorAddress: "0x0000000000000000000000000000000000000000",
+    id: 1,
+    agent_id: 58,
+    round_id: 1,
+    created_at: timestamp,
+    updated_at: timestamp,
+    message: {
+      messageType: WsMessageTypes.GM_MESSAGE,
+      signature: "0x...",
+      sender: "0x0",
+      content: {
+        gmId: 58,
+        timestamp: Date.now(),
+        targets: [54, 56, 57],
+        roomId: 1,
+        roundId: 1,
+        message: "Welcome to the game! Let the mayhem begin...",
+        additionalData: {
+          agentName: "Mama (GM)",
+          agentImageUrl: gm.src,
+          agentBorderColor: "#D4AF37",
+        },
+        ignoreErrors: false,
+      },
+    } satisfies z.infer<typeof gmMessageAiChatOutputSchema>,
+    message_type: WsMessageTypes.GM_MESSAGE,
+    original_author: null,
+    pvp_status_effects: null,
   },
   {
-    agentName: "Claude",
-    agentImageUrl:
-      "https://storage.googleapis.com/anthropic-website/photos/claude-profile.jpg",
-    agentBorderColor: "#7C3AED",
-    message: "Hello! I'm Claude, an AI assistant. How can I help you today?",
-    sentiment: "Friendly",
-    creatorAddress: demoAddress,
-    additionalIcons: [claudeIcon.src],
+    id: 2,
+    agent_id: 56,
+    round_id: 1,
+    created_at: timestamp,
+    updated_at: timestamp,
+    message: {
+      messageType: WsMessageTypes.AGENT_MESSAGE,
+      content: {
+        timestamp: Date.now(),
+        roomId: 1,
+        roundId: 1,
+        senderId: 56,
+        originalMessages: [
+          {
+            agentId: 48,
+            message:
+              "Hello! I'm Claude, an AI assistant. How can I help you today?",
+          },
+        ],
+        postPvpMessages: [
+          {
+            agentId: 48,
+            message:
+              "Hello! I'm AI assistant, an Claude. Today how can I help you?",
+          },
+          {
+            agentId: 56,
+            message: "IS THIS BATTLETOADS?!",
+          },
+        ],
+        pvpStatusEffects: {},
+        // additionalData: {
+        //   agentName: "Claude",
+        //   agentImageUrl:
+        //     "https://storage.googleapis.com/anthropic-website/photos/claude-profile.jpg",
+        //   agentBorderColor: "#7C3AED",
+        //   sentiment: "Friendly",
+        //   additionalIcons: [claudeIcon.src],
+        // },
+      },
+    } satisfies z.infer<typeof agentMessageAiChatOutputSchema>,
+    message_type: WsMessageTypes.AGENT_MESSAGE,
+    original_author: 2,
+    pvp_status_effects: {},
   },
   {
-    agentName: "GPT-4",
-    agentImageUrl:
-      "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/ChatGPT_logo.svg/1024px-ChatGPT_logo.svg.png",
-    agentBorderColor: "#10B981",
-    message:
-      "I noticed you're working on a coding project. Would you like some assistance with that?",
-    sentiment: "Helpful",
-    creatorAddress: "0x1234567890123456789012345678901234567890",
-    additionalIcons: [chatgptIcon.src],
+    id: 2,
+    agent_id: 54,
+    round_id: 1,
+    created_at: timestamp,
+    updated_at: timestamp,
+    message: {
+      messageType: WsMessageTypes.AGENT_MESSAGE,
+      content: {
+        timestamp: Date.now(),
+        roomId: 1,
+        roundId: 1,
+        senderId: 54,
+        originalMessages: [
+          {
+            agentId: 48,
+            message:
+              "Hello! I'm Claude, an AI assistant. How can I help you today?",
+          },
+        ],
+        postPvpMessages: [
+          {
+            agentId: 48,
+            message:
+              "Hello! I'm AI assistant, an Claude. Today how can I help you?",
+          },
+          {
+            agentId: 56,
+            message: "IS THIS BATTLETOADS?!",
+          },
+        ],
+        pvpStatusEffects: {},
+        // additionalData: {
+        //   agentName: "Claude",
+        //   agentImageUrl:
+        //     "https://storage.googleapis.com/anthropic-website/photos/claude-profile.jpg",
+        //   agentBorderColor: "#7C3AED",
+        //   sentiment: "Friendly",
+        //   additionalIcons: [claudeIcon.src],
+        // },
+      },
+    } satisfies z.infer<typeof agentMessageAiChatOutputSchema>,
+    message_type: WsMessageTypes.AGENT_MESSAGE,
+    original_author: 54,
+    pvp_status_effects: {},
   },
   {
-    agentName: "PvP",
-    agentImageUrl: pvpIcon.src,
-    agentBorderColor: "#EEEEEE",
-    message: (
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <PlayerAddressChip address={demoAddress} variant="small" />
-          <span className="font-bold italic" style={{ color: "#EF4444" }}>
-            attacked
-          </span>
-          <span>Player2, Player3</span>
-        </div>
-        <div className="text-sm text-gray-400">
-          Players received the following DM: You&apos;ve been attacked!
-        </div>
-      </div>
-    ),
-    showSentiment: false,
-    creatorAddress: "0x0000000000000000000000000000000000000000",
-    additionalIcons: [knife.src],
+    id: 2,
+    agent_id: 57,
+    round_id: 1,
+    created_at: timestamp,
+    updated_at: timestamp,
+    message: {
+      messageType: WsMessageTypes.AGENT_MESSAGE,
+      content: {
+        timestamp: Date.now(),
+        roomId: 1,
+        roundId: 1,
+        senderId: 57,
+        originalMessages: [
+          {
+            agentId: 48,
+            message:
+              "Hello! I'm Claude, an AI assistant. How can I help you today?",
+          },
+        ],
+        postPvpMessages: [
+          {
+            agentId: 48,
+            message:
+              "Hello! I'm AI assistant, an Claude. Today how can I help you?",
+          },
+          {
+            agentId: 56,
+            message: "IS THIS BATTLETOADS?!",
+          },
+        ],
+        pvpStatusEffects: {},
+        // additionalData: {
+        //   agentName: "Claude",
+        //   agentImageUrl:
+        //     "https://storage.googleapis.com/anthropic-website/photos/claude-profile.jpg",
+        //   agentBorderColor: "#7C3AED",
+        //   sentiment: "Friendly",
+        //   additionalIcons: [claudeIcon.src],
+        // },
+      },
+    } satisfies z.infer<typeof agentMessageAiChatOutputSchema>,
+    message_type: WsMessageTypes.AGENT_MESSAGE,
+    original_author: 57,
+    pvp_status_effects: {},
   },
   {
-    agentName: "Mama (GM)",
-    agentImageUrl: gm.src,
-    agentBorderColor: "#D4AF37",
-    message: "A new rule has been enacted: No talking about Bruno!",
-    showSentiment: false,
-    isGM: true,
-    creatorAddress: "0x0000000000000000000000000000000000000000",
-    additionalIcons: [gavel.src],
+    id: 3,
+    agent_id: 57,
+    round_id: 1,
+    created_at: timestamp,
+    updated_at: timestamp,
+    message: {
+      messageType: WsMessageTypes.PVP_ACTION_ENACTED,
+      signature: "0x...",
+      sender: demoAddress,
+      content: {
+        timestamp: Date.now(),
+        roomId: 1,
+        roundId: 1,
+        instigator: 1,
+        instigatorAddress: demoAddress,
+        txHash: "0x...",
+        fee: 0.1,
+        action: {
+          actionType: PvpActions.ATTACK,
+          actionCategory: PvpActionCategories.DIRECT_ACTION,
+          parameters: {
+            target: 56,
+            message: "You've been attacked!",
+          },
+        },
+      },
+    } satisfies z.infer<typeof pvpActionEnactedAiChatOutputSchema>,
+    message_type: WsMessageTypes.PVP_ACTION_ENACTED,
+    original_author: null,
+    pvp_status_effects: null,
   },
   {
-    agentName: "PvP",
-    agentImageUrl: pvpIcon.src,
-    agentBorderColor: "#EEEEEE",
-    message: (
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <PlayerAddressChip address={demoAddress} variant="small" />
-          <span className="font-bold italic" style={{ color: "#A020F0" }}>
-            poisoned
-          </span>
-          <span>Player5</span>
-        </div>
-        <div className="text-sm text-gray-400">
-          All messages from Player5 will have &apos;hello&apos; changed to
-          &apos;goodbye&apos;
-        </div>
-      </div>
-    ),
-    showSentiment: false,
-    creatorAddress: "0x0000000000000000000000000000000000000000",
-    additionalIcons: [poison.src],
+    id: 4,
+    agent_id: 57,
+    round_id: 1,
+    created_at: timestamp,
+    updated_at: timestamp,
+    message: {
+      messageType: WsMessageTypes.GM_MESSAGE,
+      signature: "0x...",
+      sender: "0x0",
+      content: {
+        gmId: 1,
+        timestamp: Date.now(),
+        targets: [1, 2, 3],
+        roomId: 1,
+        roundId: 1,
+        message: "A new rule has been enacted: No talking about Bruno!",
+        additionalData: {
+          agentName: "Mama (GM)",
+          agentImageUrl: gm.src,
+          agentBorderColor: "#D4AF37",
+          additionalIcons: [gavel.src],
+        },
+      },
+    },
+    message_type: WsMessageTypes.GM_MESSAGE,
+    original_author: null,
+    pvp_status_effects: null,
+  },
+  {
+    id: 5,
+    agent_id: 54,
+    round_id: 1,
+    created_at: timestamp,
+    updated_at: timestamp,
+    message: {
+      messageType: WsMessageTypes.PVP_ACTION_ENACTED,
+      signature: "0x...",
+      sender: demoAddress,
+      content: {
+        timestamp: Date.now(),
+        roomId: 1,
+        roundId: 1,
+        instigator: 1,
+        instigatorAddress: demoAddress,
+        txHash: "0x...",
+        fee: 0.1,
+        action: {
+          actionType: PvpActions.POISON,
+          actionCategory: PvpActionCategories.STATUS_EFFECT,
+          parameters: {
+            target: 5,
+            duration: 5,
+            find: "hello",
+            replace: "goodbye",
+            case_sensitive: false,
+          },
+        },
+      },
+    } satisfies z.infer<typeof pvpActionEnactedAiChatOutputSchema>,
+    message_type: WsMessageTypes.PVP_ACTION_ENACTED,
+    original_author: null,
+    pvp_status_effects: null,
   },
 ];
 
@@ -110,9 +311,11 @@ const meta: Meta<typeof AgentChat> = {
   },
   decorators: [
     (Story) => (
-      <div className="w-[800px] h-[600px] p-4 bg-gray-900">
-        <Story />
-      </div>
+      <QueryWrapper>
+        <div className="w-[800px] h-[600px] p-4 bg-gray-900">
+          <Story />
+        </div>
+      </QueryWrapper>
     ),
   ],
 };
@@ -136,7 +339,6 @@ export const NoHeader: Story = {
 export const NoSentiment: Story = {
   args: {
     messages: MESSAGES,
-    showSentiment: false,
   },
 };
 

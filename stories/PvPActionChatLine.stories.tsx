@@ -1,5 +1,30 @@
+import {
+  pvpActionEnactedAiChatOutputSchema,
+  WsMessageTypes,
+} from "@/lib/backend.types";
+import { PvpActionCategories, PvpActions } from "@/lib/pvp.types";
 import type { Meta, StoryObj } from "@storybook/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactNode } from "react";
+import { z } from "zod";
 import { PvPActionChatLine } from "./PvPActionChatLine";
+
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // For Storybook, disable retries and keep cache for longer
+      retry: false,
+      staleTime: Infinity,
+      gcTime: Infinity,
+    },
+  },
+});
+
+// Create a wrapper component
+const QueryWrapper = ({ children }: { children: ReactNode }) => (
+  <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+);
 
 const meta = {
   title: "Components/PvPActionChatLine",
@@ -13,48 +38,115 @@ const meta = {
       default: "dark",
     },
   },
+  decorators: [
+    (Story) => (
+      <QueryWrapper>
+        <Story />
+      </QueryWrapper>
+    ),
+  ],
   tags: ["autodocs"],
 } satisfies Meta<typeof PvPActionChatLine>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Attack: Story = {
-  args: {
-    action: "attack",
-    instigator: "0x1234567890123456789012345678901234567890",
-    targets: ["Player1", "Player2"],
-    description: "Player1 received the following DM: You've been attacked!",
+// Create a properly typed base message
+const baseMessage: z.infer<typeof pvpActionEnactedAiChatOutputSchema> = {
+  messageType: WsMessageTypes.PVP_ACTION_ENACTED,
+  signature: "0xsignature",
+  sender: "0xsender",
+  content: {
+    timestamp: Date.now(),
+    roomId: 1,
+    roundId: 1,
+    instigator: 48,
+    instigatorAddress: "0x1234567890123456789012345678901234567890",
+    txHash: "0xtxhash",
+    fee: 0.001,
+    action: {
+      actionType: PvpActions.ATTACK, // Default action, will be overridden in stories
+      actionCategory: PvpActionCategories.DIRECT_ACTION,
+      parameters: {
+        target: 49,
+        message: "message wow", // Will be overridden in stories
+      },
+    },
   },
 };
 
-export const Mute: Story = {
+export const Attack: Story = {
   args: {
-    action: "mute",
-    instigator: "0x1234567890123456789012345678901234567890",
-    targets: ["Player3"],
-    description: "Player3 will be unable to speak for 30 seconds",
-    sentiment: "Negative",
-    showSentiment: true,
+    message: {
+      ...baseMessage,
+      content: {
+        ...baseMessage.content,
+        action: {
+          actionType: PvpActions.ATTACK,
+          actionCategory: PvpActionCategories.DIRECT_ACTION,
+          parameters: {
+            target: 49,
+            message: "You've been attacked!",
+          },
+        },
+      },
+    },
+  },
+};
+
+export const Silence: Story = {
+  args: {
+    message: {
+      ...baseMessage,
+      content: {
+        ...baseMessage.content,
+        action: {
+          actionType: PvpActions.SILENCE,
+          parameters: {
+            target: 50,
+            duration: 30,
+          },
+        },
+      },
+    } as z.infer<typeof pvpActionEnactedAiChatOutputSchema>,
   },
 };
 
 export const Deafen: Story = {
   args: {
-    action: "deafen",
-    instigator: "0x1234567890123456789012345678901234567890",
-    targets: ["Player4"],
-    description:
-      "Player4 will be unable to receive messages from anyone but the GM for the next 30 seconds",
+    message: {
+      ...baseMessage,
+      content: {
+        ...baseMessage.content,
+        action: {
+          actionType: PvpActions.DEAFEN,
+          parameters: {
+            target: 51,
+            duration: 30,
+          },
+        },
+      },
+    } as z.infer<typeof pvpActionEnactedAiChatOutputSchema>,
   },
 };
 
 export const Poison: Story = {
   args: {
-    action: "poison",
-    instigator: "0x1234567890123456789012345678901234567890",
-    targets: ["Player5", "Player6"],
-    description:
-      "All messages from Player5 will have 'hello' changed to 'goodbye'",
+    message: {
+      ...baseMessage,
+      content: {
+        ...baseMessage.content,
+        action: {
+          actionType: PvpActions.POISON,
+          parameters: {
+            target: 52,
+            find: "hello",
+            replace: "goodbye",
+            duration: 30,
+            case_sensitive: false,
+          },
+        },
+      },
+    } as z.infer<typeof pvpActionEnactedAiChatOutputSchema>,
   },
 };

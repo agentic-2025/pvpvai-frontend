@@ -1,45 +1,41 @@
 "use client";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { WsMessageTypes } from "@/lib/backend.types";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  agentMessageAiChatOutputSchema,
+  AllAiChatMessageSchemaTypes,
+  gmMessageAiChatOutputSchema,
+  isSupportedInAiChat,
+  observationMessageAiChatOutputSchema,
+  pvpActionEnactedAiChatOutputSchema,
+  WsMessageTypes,
+} from "@/lib/backend.types";
 import { cn } from "@/lib/utils";
-import { ReactNode, useLayoutEffect, useRef } from "react";
-import { AgentChatLine } from "./AgentChatLine";
+import { useLayoutEffect, useRef } from "react";
+import { AgentMessageChatLine } from "./AgentMessageChatLine";
 import { GMChatLine } from "./GMChatLine";
-export interface AgentChatMessage {
-  messageType:
-    | WsMessageTypes.GM_MESSAGE
-    | WsMessageTypes.AI_CHAT_AGENT_MESSAGE
-    | WsMessageTypes.AI_CHAT_PVP_ACTION_ENACTED
-    | WsMessageTypes.AI_CHAT_PVP_STATUS_REMOVED
-    | WsMessageTypes.OBSERVATION;
-  agentId: number;
-  message: ReactNode;
-  createdAt: string;
-  agentDetails?: {
-    id?: number;
-    agents?: {
-      id?: number;
-      color?: string;
-      image_url?: string;
-      display_name?: string;
-    };
-  };
-  sentiment?: string;
-  additionalIcons?: string[];
-}
+import { ObservationChatLine } from "./ObservationChatLine";
+import { PvPActionChatLine } from "./PvPActionChatLine";
+
+// <resource>AiChatOutputSchema schemas are the messages that players will receive for AI Chat
+// export type AgentChatMessage =
+//   | z.infer<typeof pvpActionEnactedAiChatOutputSchema>
+//   | z.infer<typeof gmMessageAiChatOutputSchema>
+//   | z.infer<typeof agentMessageAiChatOutputSchema>
+//   | z.infer<typeof observationMessageAiChatOutputSchema>;
 
 interface AgentChatProps {
-  messages: AgentChatMessage[];
+  messages: AllAiChatMessageSchemaTypes[];
   showHeader?: boolean;
-  showSentiment?: boolean;
   className?: string;
+  loading?: boolean;
 }
 
 export function AgentChat({
   messages,
   showHeader = true,
-  showSentiment = true,
   className,
+  loading = false,
 }: AgentChatProps) {
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
 
@@ -47,6 +43,30 @@ export function AgentChat({
   useLayoutEffect(() => {
     endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  if (loading) {
+    return (
+      <div className={cn("flex flex-col h-full w-full", className)}>
+        {showHeader && (
+          <div className="flex items-center justify-between px-4 py-2 border-b border-gray-800">
+            <h2 className="text-lg font-semibold text-gray-200">
+              AI Agent Chat
+            </h2>
+          </div>
+        )}
+        <ScrollArea className="flex-1">
+          <div className="flex flex-col gap-4 p-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex flex-col gap-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-16 w-full" />
+              </div>
+            ))}
+          </div>
+        </ScrollArea>
+      </div>
+    );
+  }
 
   return (
     <div className={cn("flex flex-col h-full w-full", className)}>
@@ -57,33 +77,51 @@ export function AgentChat({
       )}
       <ScrollArea className="flex-1">
         <div className="flex flex-col divide-y divide-gray-800">
-          {messages.map((msg, index) => {
-            // Use fallback values in case agentDetails or its nested properties are missing.
-            const agentDisplayName =
-              msg.agentDetails?.agents?.display_name || "Unknown Agent";
-            const agentImageUrl = msg.agentDetails?.agents?.image_url || "";
-            const agentBorderColor =
-              msg.agentDetails?.agents?.color || "#cccccc";
-
-            console.log("msg", msg);
-            console.log("msg", msg.messageType);
-            if (msg.messageType === WsMessageTypes.GM_MESSAGE) {
-              return <GMChatLine key={index} message={msg.message} />;
-            } else {
-              return (
-                <AgentChatLine
-                  key={index}
-                  agentName={agentDisplayName}
-                  agentImageUrl={agentImageUrl}
-                  agentBorderColor={agentBorderColor}
-                  message={msg.message}
-                  sentiment={msg.sentiment}
-                  showSentiment={showSentiment}
-                  additionalIcons={msg.additionalIcons}
-                />
-              );
-            }
-          })}
+          {messages
+            .filter((msg) => {
+              if (!isSupportedInAiChat(msg.messageType)) {
+                console.log("msg", msg);
+                console.log("msg.messageType", msg.messageType);
+                console.log("msg.messageType", msg["messageType"]);
+                console.log(
+                  "Encountered unsupported message type, skipping: ",
+                  msg.messageType
+                );
+                return false;
+              }
+              return true;
+            })
+            .map((msg, index) => {
+              switch (msg.messageType) {
+                case WsMessageTypes.GM_MESSAGE:
+                  const gmMessage = gmMessageAiChatOutputSchema.parse(msg);
+                  return <GMChatLine key={index} message={gmMessage} />;
+                case WsMessageTypes.AGENT_MESSAGE:
+                  const agentMessage =
+                    agentMessageAiChatOutputSchema.parse(msg);
+                  return (
+                    <AgentMessageChatLine key={index} message={agentMessage} />
+                  );
+                case WsMessageTypes.OBSERVATION:
+                  const observationMessage =
+                    observationMessageAiChatOutputSchema.parse(msg);
+                  return (
+                    <ObservationChatLine
+                      key={index}
+                      message={observationMessage}
+                    />
+                  );
+                case WsMessageTypes.PVP_ACTION_ENACTED:
+                  const pvpActionEnactedMessage =
+                    pvpActionEnactedAiChatOutputSchema.parse(msg);
+                  return (
+                    <PvPActionChatLine
+                      key={index}
+                      message={pvpActionEnactedMessage}
+                    />
+                  );
+              }
+            })}
           {/* Dummy element to scroll into view */}
           <div ref={endOfMessagesRef} />
         </div>

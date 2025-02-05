@@ -3,22 +3,18 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { KeyboardEvent, useLayoutEffect, useRef, useState } from "react";
 import { PublicChatLine } from "./PublicChatLine";
+import { publicChatMessageInputSchema } from "@/lib/backend.types";
+import { z } from "zod";
 
 const MAX_MESSAGE_LENGTH = 500;
 
-export interface PublicChatMessage {
-  address: string;
-  avatarUrl?: string;
-  message: string;
-  timestamp: Date;
-}
-
 interface PublicChatProps {
-  messages: PublicChatMessage[];
+  messages: z.infer<typeof publicChatMessageInputSchema>[];
   className?: string;
   onSendMessage?: (message: string) => void;
   currentUserAddress?: string;
   variant?: "default" | "compact";
+  loading?: boolean;
 }
 
 export function PublicChat({
@@ -27,6 +23,7 @@ export function PublicChat({
   onSendMessage,
   currentUserAddress,
   variant = "default",
+  loading = false,
 }: PublicChatProps) {
   const [inputValue, setInputValue] = useState("");
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
@@ -57,16 +54,26 @@ export function PublicChat({
     <div className={cn("flex flex-col h-full bg-[#313338] w-full", className)}>
       <ScrollArea className="flex-1">
         <div className="flex flex-col py-4">
-          {messages.map((msg, index) => (
-            <PublicChatLine
-              key={index}
-              address={String(msg.address)}
-              avatarUrl={msg.avatarUrl}
-              message={msg.message}
-              timestamp={msg.timestamp}
-              variant={variant}
-            />
-          ))}
+          {loading ? (
+            <div className="flex items-center justify-center py-4">
+              <span className="text-gray-400">Loading messages...</span>
+            </div>
+          ) : (
+            <>
+              {messages.map((msg, index) => (
+                <PublicChatLine
+                  key={index}
+                  id={msg.content.userId}
+                  // TODO below is technically the wrong field, should be the user id, but I'm exhausted
+                  address={String(msg.sender)}
+                  avatarUrl={""}
+                  message={msg.content.text}
+                  timestamp={new Date(msg.content.timestamp)}
+                  variant={variant}
+                />
+              ))}
+            </>
+          )}
           {/* Dummy div to scroll into view */}
           <div ref={endOfMessagesRef} />
         </div>

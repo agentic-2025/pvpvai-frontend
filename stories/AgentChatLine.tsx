@@ -1,4 +1,10 @@
 "use client";
+
+/*
+  Agent chat line is the base class used to consistently style all chat line variants
+  that appear in AI Chat. You will generally never want to use this component directly, 
+  instead use one of the components that use is, likee GMChatLine, PvpActionChatLine, etc. 
+*/
 import {
   Tooltip,
   TooltipContent,
@@ -6,11 +12,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { ReactNode } from "react";
+import React, { ReactNode } from "react";
 import { AgentBadge } from "./AgentBadge";
-import Image from "next/image";
 
 interface AgentChatLineProps {
+  agentId: number;  
   agentName: string;
   agentImageUrl?: string;
   agentBorderColor: string;
@@ -21,7 +27,8 @@ interface AgentChatLineProps {
   isGM?: boolean;
   creatorAddress?: string;
   popularity?: number;
-  additionalIcons?: string[];
+  backgroundIcon?: string;
+  backgroundImageOpacity?: number;
 }
 
 const actionColors: Record<
@@ -48,6 +55,7 @@ const actionColors: Record<
 };
 
 export function AgentChatLine({
+  agentId,
   agentName,
   agentImageUrl,
   agentBorderColor,
@@ -58,17 +66,20 @@ export function AgentChatLine({
   isGM = false,
   creatorAddress,
   popularity,
-  additionalIcons,
+  backgroundIcon,
+  backgroundImageOpacity,
 }: AgentChatLineProps) {
-  // FIX: extract the text from message if it is an object with a "text" property.
-  let renderedMessage: string;
-  if (typeof message === "object" && message !== null) {
-    renderedMessage = (message as any).text || JSON.stringify(message);
-  } else {
+  let renderedMessage: string | ReactNode = message;
+  if (typeof message === "object" && message !== null && "text" in message) {
+    renderedMessage = (message as { text: string }).text;
+  } else if (typeof message !== "string" && !React.isValidElement(message)) {
+    // Only stringify primitive values, not React elements
     renderedMessage = String(message);
   }
 
-  const bgOpacity = isGM ? "70" : "20";
+  const defaultOpacity = isGM ? 70 : 20;
+  const finalOpacity = backgroundImageOpacity ?? defaultOpacity;
+
   // Use lowercase agentName for matching in actionColors (if applicable)
   const actionColor = actionColors[agentName.toLowerCase()] || { text: "gray" };
 
@@ -76,7 +87,7 @@ export function AgentChatLine({
     <div className="flex items-stretch gap-2 py-1 px-2">
       <div className="flex flex-col items-end gap-0.5 w-[140px] shrink-0">
         <AgentBadge
-          id={agentName}
+          id={agentId}
           name={agentName}
           color={agentBorderColor}
           borderColor={badgeBorderColor}
@@ -84,31 +95,30 @@ export function AgentChatLine({
           avatar={agentImageUrl}
           creatorAddress={creatorAddress || "0x0"}
           popularity={popularity}
-          additionalIcons={additionalIcons}
         />
       </div>
       <div
-        className="flex-1 min-w-0 rounded px-3 py-1"
+        className="flex-1 min-w-0 rounded px-3 py-1 relative"
         style={{
-          backgroundColor: `${agentBorderColor}${bgOpacity}`,
+          backgroundColor: `${agentBorderColor}${finalOpacity}`,
           border: `2px solid ${agentBorderColor}45`,
         }}
       >
+        {backgroundIcon && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              backgroundImage: `url(${backgroundIcon})`,
+              backgroundSize: "contain",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+              filter: isGM ? "brightness(0.7) contrast(1.2)" : undefined,
+              height: "100%",
+              opacity: finalOpacity / 100,
+            }}
+          />
+        )}
         <div className="flex items-center gap-2">
-          {additionalIcons && additionalIcons[0] && (
-            <Image
-              src={additionalIcons[0]}
-              alt="action"
-              className="w-5 h-5 shrink-0"
-              style={{
-                filter: actionColor.iconColor
-                  ? `hue-rotate(270deg) saturate(2)`
-                  : undefined,
-              }}
-              width={2000}
-              height={2000}
-            />
-          )}
           <div className="flex-1 min-w-0">
             <TooltipProvider>
               <Tooltip>
@@ -116,10 +126,11 @@ export function AgentChatLine({
                   <div
                     className={cn(
                       "text-sm w-full overflow-x-hidden",
-                      actionColor.text
-                        ? `text-[${actionColor.text}]`
-                        : "text-gray-200",
-                      "line-clamp-5 break-all"
+                      "text-white",
+                      // Only apply action colors for specific actions
+                      agentName.toLowerCase() in actionColors &&
+                        `text-[${actionColor.text}]`,
+                      "line-clamp-5 break-words"
                     )}
                   >
                     {renderedMessage}

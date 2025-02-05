@@ -1,9 +1,29 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AgentBadge } from "./AgentBadge";
 import demoImage from "./assets/demo-personalities/godzilla.jpg";
 import gavelIcon from "./assets/pvp/gavel.svg";
 import poisonIcon from "./assets/pvp/poison.svg";
 import silenceIcon from "./assets/pvp/silence.svg";
+
+// Create a client for React Query
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: Infinity,
+    },
+  },
+});
+
+const demoAddress = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e";
+
+// Base args that match the AgentBadgeProps interface
+const baseArgs = {
+  id: 1,
+  name: "Agent Smith",
+  color: "#FF7B00",
+  creatorAddress: demoAddress,
+};
 
 const meta = {
   title: "Components/AgentBadge",
@@ -17,17 +37,18 @@ const meta = {
       default: "dark",
     },
   },
+  decorators: [
+    (Story) => (
+      <QueryClientProvider client={queryClient}>
+        <Story />
+      </QueryClientProvider>
+    ),
+  ],
   tags: ["autodocs"],
 } satisfies Meta<typeof AgentBadge>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-const baseArgs = {
-  id: "agent1",
-  name: "Agent Smith",
-  color: "#FF7B00",
-};
 
 // Medium Variants
 export const MediumDarkColor: Story = {
@@ -48,24 +69,24 @@ export const MediumWithAvatar: Story = {
 export const MediumLightColor: Story = {
   args: {
     ...baseArgs,
-    color: "#FFE5CC",
     variant: "md",
+    color: "#FFE5CC",
   },
 };
 
 export const MediumLongName: Story = {
   args: {
     ...baseArgs,
-    name: "Agent Smith With A Very Long Name",
     variant: "md",
+    name: "Agent Smith With A Very Long Name",
   },
 };
 
 export const MediumShortName: Story = {
   args: {
     ...baseArgs,
-    name: "Bob",
     variant: "md",
+    name: "Bob",
   },
 };
 
@@ -88,24 +109,24 @@ export const SmallWithAvatar: Story = {
 export const SmallLightColor: Story = {
   args: {
     ...baseArgs,
-    color: "#FFE5CC",
     variant: "sm",
+    color: "#FFE5CC",
   },
 };
 
 export const SmallLongName: Story = {
   args: {
     ...baseArgs,
-    name: "Agent Smith With A Very Long Name",
     variant: "sm",
+    name: "Agent Smith With A Very Long Name",
   },
 };
 
 export const SmallShortName: Story = {
   args: {
     ...baseArgs,
-    name: "Bob",
     variant: "sm",
+    name: "Bob",
   },
 };
 
@@ -130,32 +151,30 @@ export const ExtraSmallWithAvatar: Story = {
 export const ExtraSmallLightColor: Story = {
   args: {
     ...baseArgs,
-    color: "#FFE5CC",
     variant: "xs",
+    color: "#FFE5CC",
   },
 };
 
 export const ExtraSmallLongName: Story = {
   args: {
     ...baseArgs,
-    name: "Agent Smith With A Very Long Name",
     variant: "xs",
+    name: "Agent Smith With A Very Long Name",
   },
 };
 
 export const ExtraSmallShortName: Story = {
   args: {
     ...baseArgs,
-    name: "Bob",
     variant: "xs",
+    name: "Bob",
   },
 };
 
-const demoAddress = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e";
-
 export const Default: Story = {
   args: {
-    id: "agent1",
+    id: 1,
     name: "Test Agent",
     color: "#7C3AED",
     creatorAddress: demoAddress,
@@ -164,42 +183,41 @@ export const Default: Story = {
 
 export const WithAvatar: Story = {
   args: {
-    id: "agent2",
+    id: 1,
     name: "Avatar Agent",
     color: "#10B981",
     avatar: "https://avatars.githubusercontent.com/u/1",
-    creatorAddress: "0x1234567890123456789012345678901234567890",
+    creatorAddress: demoAddress,
   },
 };
 
 export const Small: Story = {
   args: {
-    id: "agent3",
+    id: 1,
     name: "Small Agent",
     color: "#F59E0B",
     variant: "sm",
-    creatorAddress: "0x9876543210987654321098765432109876543210",
+    creatorAddress: demoAddress,
   },
 };
 
 export const WithIcons: Story = {
   args: {
-    id: "agent4",
+    id: 1,
     name: "Icon Agent",
     color: "#7C3AED",
-    creatorAddress: "0x5432109876543210987654321098765432109876",
+    creatorAddress: demoAddress,
     additionalIcons: [gavelIcon.src, silenceIcon.src, poisonIcon.src],
   },
 };
 
 export const FullExample: Story = {
   args: {
-    id: "agent5",
+    id: 1,
     name: "Complete Agent",
     color: "#10B981",
-    avatar: "https://avatars.githubusercontent.com/u/1",
-    creatorAddress: "0x1111222233334444555566667777888899990000",
-    popularity: 42,
+    avatar: demoImage.src,
+    creatorAddress: demoAddress,
     additionalIcons: [gavelIcon.src],
   },
 };

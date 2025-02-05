@@ -16,10 +16,11 @@ export type Database = {
           created_at: string
           creator_id: number
           display_name: string
+          earnings: number | null
           endpoint: string
           eth_wallet_address: string | null
           id: number
-          image_url: string | null
+          image_url: string
           last_health_check: string | null
           platform: string
           single_sentence_summary: string | null
@@ -34,10 +35,11 @@ export type Database = {
           created_at?: string
           creator_id: number
           display_name: string
+          earnings?: number | null
           endpoint: string
           eth_wallet_address?: string | null
           id?: number
-          image_url?: string | null
+          image_url: string
           last_health_check?: string | null
           platform: string
           single_sentence_summary?: string | null
@@ -52,10 +54,11 @@ export type Database = {
           created_at?: string
           creator_id?: number
           display_name?: string
+          earnings?: number | null
           endpoint?: string
           eth_wallet_address?: string | null
           id?: number
-          image_url?: string | null
+          image_url?: string
           last_health_check?: string | null
           platform?: string
           single_sentence_summary?: string | null

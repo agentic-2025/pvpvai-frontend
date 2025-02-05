@@ -1,16 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactNode } from "react";
-import { GMChatLine } from "./GMChatLine";
+import { ObservationChatLine } from "./ObservationChatLine";
+import { ObservationType } from "@/lib/backend.types";
 
 // Create a client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // For Storybook, disable retries and keep cache for longer
       retry: false,
       staleTime: Infinity,
-      cacheTime: Infinity,
+      gcTime: Infinity,
     },
   },
 });
@@ -21,8 +21,8 @@ const QueryWrapper = ({ children }: { children: ReactNode }) => (
 );
 
 const meta = {
-  title: "Components/GMChatLine",
-  component: GMChatLine,
+  title: "Components/ObservationChatLine",
+  component: ObservationChatLine,
   parameters: {
     layout: "centered",
     backgrounds: {
@@ -40,54 +40,57 @@ const meta = {
     ),
   ],
   tags: ["autodocs"],
-} satisfies Meta<typeof GMChatLine>;
+} satisfies Meta<typeof ObservationChatLine>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const mockGMMessage = {
-  messageType: "gm_message" as const,
+const mockObservationMessage = {
+  messageType: "observation" as const,
   signature: "mock_signature",
   sender: "mock_sender",
   content: {
-    message: "Welcome to the game!",
-    gmId: 51,
+    agentId: 1,
     timestamp: Date.now(),
-    targets: [48, 49, 50],
     roomId: 1,
     roundId: 1,
-    ignoreErrors: false,
+    observationType: ObservationType.WALLET_BALANCES,
+    data: {
+      // Mock data object
+      balances: {
+        eth: "1.5",
+        usdc: "1000",
+      },
+    },
   },
 };
 
 export const Default: Story = {
   args: {
-    message: mockGMMessage,
+    message: mockObservationMessage,
   },
 };
 
-export const WithLongMessage: Story = {
+export const PriceData: Story = {
   args: {
     message: {
-      ...mockGMMessage,
+      ...mockObservationMessage,
       content: {
-        ...mockGMMessage.content,
-        message:
-          "The game begins now... May the odds be ever in your favor. Remember to watch your back and trust no one completely.",
+        ...mockObservationMessage.content,
+        observationType: ObservationType.PRICE_DATA,
       },
     },
   },
 };
 
-export const SingleTarget: Story = {
+export const GameEvent: Story = {
   args: {
     message: {
-      ...mockGMMessage,
+      ...mockObservationMessage,
       content: {
-        ...mockGMMessage.content,
-        targets: [48],
-        message: "A private message for you...",
+        ...mockObservationMessage.content,
+        observationType: ObservationType.GAME_EVENT,
       },
     },
   },
-};
+}; 

@@ -5,7 +5,7 @@ interface AgentAvatarProps {
   name: string;
   borderColor: string;
   imageUrl?: string;
-  variant?: "lg" | "md" | "sm" | "xs";
+  variant?: "lg" | "md" | "sm" | "xs" | "xxs";
   className?: string;
 }
 
@@ -27,8 +27,13 @@ const variantStyles = {
   },
   xs: {
     size: "size-8",
-    border: "border-2-",
+    border: "border-2",
     text: "text-[0.5rem]",
+  },
+  xxs: {
+    size: "size-4",
+    border: "border",
+    text: "text-[0.25rem]",
   },
 };
 
