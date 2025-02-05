@@ -1,5 +1,5 @@
 // High level description of the type of action being taken
-export enum PvpActionTypes {
+export enum PvpActionCategories {
   DIRECT_ACTION = "DIRECT_ACTION", // Direct/single use actions
   STATUS_EFFECT = "STATUS_EFFECT", // Status effects that last a duration of time
   BUFF = "BUFF", // Functionally the same as a status effect, but with a positive connotation, used for hapiness
