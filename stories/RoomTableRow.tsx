@@ -89,6 +89,7 @@ export function RoomTableRow({
           {room.agents?.map((agent) => (
             <AgentAvatar
               key={agent.id}
+              id={agent.id}
               name={agent.displayName}
               imageUrl={agent.image || ""}
               borderColor={agent.color}

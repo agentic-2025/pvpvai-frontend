@@ -6,32 +6,39 @@ import supabase from "@/lib/config";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { AgentAvatar } from "@/stories/AgentAvatar";
-import { Textarea } from "@/components/ui/textarea";
 import Loader from "@/components/loader";
+import { formatDistanceToNow } from "date-fns";
+import { Copy } from "lucide-react";
+import AnimatedBackground from "@/components/ui/animated-tabs";
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
+import { Database } from "@/lib/database.types";
+import Image from "next/image";
+import { chainMetadata } from "@/lib/utils";
+import { roomTypeMapping } from "@/stories/RoomTable";
 
-// Define the expected type for an agent (only necessary fields for display)
-type Agent = {
-  id: number;
-  image_url: string;
-  color: string;
-  display_name: string;
-  single_sentence_summary: string;
-  platform: string;
-  endpoint: string;
-  status: string;
-  type: string;
-  earnings: number | null;
-  character_card: string; // JSON string
-};
+export type Room = Database["public"]["Tables"]["rooms"]["Row"];
+export type Agent = Database["public"]["Tables"]["agents"]["Row"];
+
+const viewOptions = ["Agent Info", "Rooms"];
 
 export default function AgentSummary() {
   const params = useParams();
-  const id = params.id; // Ensure your route is something like /agent/[id]
+  const id = params.id;
   const [agent, setAgent] = useState<Agent | null>(null);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [selectedView, setSelectedView] = useState("Agent Info");
   const [loading, setLoading] = useState(true);
+  const [roomsLoading, setRoomsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Fetch only the necessary fields from Supabase
+  // Fetch agent data
   useEffect(() => {
     const fetchAgent = async () => {
       const { data, error } = await supabase
@@ -48,10 +55,11 @@ export default function AgentSummary() {
           status,
           type,
           earnings,
-          character_card
+          character_card,
+          last_health_check
         `
         )
-        .eq("id", id)
+        .eq("id", Number(id))
         .single();
 
       if (error) {
@@ -64,6 +72,40 @@ export default function AgentSummary() {
 
     fetchAgent();
   }, [id]);
+
+  // When in "Rooms" view, fetch the rooms where the agent is present.
+  useEffect(() => {
+    if (selectedView === "Rooms" && agent) {
+      const fetchRooms = async () => {
+        setRoomsLoading(true);
+        const { data, error } = await supabase
+          .from("room_agents")
+          .select(
+            `
+            room_id,
+            rooms (
+              id,
+              name,
+              chain_id,
+              created_at
+            )
+          `
+          )
+          .eq("agent_id", agent.id);
+
+        if (error) {
+          console.error("Error fetching rooms:", error);
+        } else if (data) {
+          // Map each join row to its related room.
+          const roomList: Room[] = data.map((item: any) => item.rooms);
+          setRooms(roomList);
+        }
+        setRoomsLoading(false);
+      };
+
+      fetchRooms();
+    }
+  }, [selectedView, agent]);
 
   if (loading) return <Loader />;
   if (error)
@@ -79,142 +121,179 @@ export default function AgentSummary() {
       </div>
     );
 
-  // Try to parse the character_card to extract key fields.
   let characterCard: { [key: string]: any } = {};
   try {
-    characterCard = JSON.parse(agent.character_card);
+    characterCard = agent?.character_card
+      ? JSON.parse(agent.character_card)
+      : {};
   } catch (e) {
     console.error("Error parsing character_card:", e);
   }
 
-  // Helper function to display arrays as comma-separated strings.
-  const displayArray = (value: any) =>
-    Array.isArray(value) ? value.join(", ") : value;
-
   return (
     <div className="min-h-screen py-8">
       <Card className="p-8 max-w-4xl mx-auto bg-secondary/20 text-gray-200 shadow-2xl rounded-lg">
-        <div className="flex flex-col items-center border-secondary-foreground border-b pb-6 mb-6">
-          {/* Agent Image */}
+        {/* Agent Basic Info */}
+        <div className="flex flex-col items-center border-secondary-foreground mb-2">
           <AgentAvatar
+            id={agent.id}
             name={agent.display_name}
             imageUrl={agent.image_url || "/default-agent.png"}
             borderColor={agent.color}
             variant="lg"
           />
-
-          {/* Basic Agent Info */}
           <h2 className="text-4xl font-extrabold mb-2">{agent.display_name}</h2>
           <p className="text-xl text-center max-w-xl">
             {agent.single_sentence_summary}
           </p>
         </div>
 
-        {/* (Optional) You can uncomment this grid if you want to display more agent info */}
-        {/*
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-          <div>
-            <Label className="font-semibold text-lg text-gray-100">Platform:</Label>
-            <div className="text-base">{agent.platform}</div>
-          </div>
-          <div>
-            <Label className="font-semibold text-lg text-gray-100">Endpoint:</Label>
-            <div className="text-base">{agent.endpoint}</div>
-          </div>
-          <div>
-            <Label className="font-semibold text-lg text-gray-100">Status:</Label>
-            <div className={`text-base ${agent.status === "Active" ? "text-green-600" : "text-red-600"}`}>
-              {agent.status}
-            </div>
-          </div>
-          <div>
-            <Label className="font-semibold text-lg text-gray-100">Type:</Label>
-            <div className="text-base">{agent.type}</div>
-          </div>
-          <div>
-            <Label className="font-semibold text-lg text-gray-100">Earnings:</Label>
-            <div className="text-base">
-              {agent.earnings !== null ? `${agent.earnings} USDC` : "N/A"}
-            </div>
-          </div>
+        <div className="mb-6 bg-secondary/25 p-1.5 rounded-lg w-fit">
+          <AnimatedBackground
+            className="bg-secondary/50 rounded-md"
+            defaultValue={selectedView}
+            onValueChange={setSelectedView}
+          >
+            {viewOptions.map((option) => (
+              <button
+                key={option}
+                data-id={option}
+                className="px-6 py-3 rounded-md text-lg font-medium transition-colors"
+              >
+                {option}
+              </button>
+            ))}
+          </AnimatedBackground>
         </div>
-        */}
 
-        {/* Character Card Section */}
-        <div>
-          {/* Display Name and Description if available */}
-          {(characterCard?.name || characterCard?.description) && (
-            <div className="mb-6">
-              {characterCard?.name && (
-                <div className="mb-2">
-                  <Label className="font-semibold text-lg text-gray-100">
-                    Name:
-                  </Label>
-                  <div className="text-base">{characterCard?.name}</div>
+        {selectedView === "Agent Info" && (
+          <>
+            <div>
+              <Label className="font-semibold text-xl text-gray-200">
+                Agent Information:
+              </Label>
+              <div className="mb-6 bg-muted/80 p-4 rounded-lg shadow-md mt-2">
+                <div className="text-base space-y-2">
+                  <p className="text-gray-400">
+                    <span className="font-semibold text-gray-200">
+                      Platform:
+                    </span>{" "}
+                    {agent.platform}
+                  </p>
+                  <p className="text-gray-400">
+                    <span className="font-semibold text-gray-200">
+                      Endpoint:
+                    </span>{" "}
+                    {agent.endpoint}
+                  </p>
+                  <p className="text-gray-400">
+                    <span className="font-semibold text-gray-200">
+                      Earnings:
+                    </span>{" "}
+                    {agent.earnings !== null ? `${agent.earnings} USDC` : "N/A"}
+                  </p>
+                  <p className="text-gray-400">
+                    <span className="font-semibold text-gray-200">
+                      Last Health Check:
+                    </span>{" "}
+                    {agent.last_health_check
+                      ? formatDistanceToNow(new Date(agent.last_health_check), {
+                          addSuffix: true,
+                        })
+                      : "N/A"}
+                  </p>
                 </div>
-              )}
-              {characterCard?.description && (
-                <div>
-                  <Label className="font-semibold text-lg text-gray-100">Description:</Label>
-                  <div className="text-base">{characterCard?.description}</div>
+              </div>
+            </div>
+
+            {/* Character Card JSON Section */}
+            <div>
+              <Label className="font-semibold text-lg text-gray-100">
+                Character Card (JSON):
+              </Label>
+              <div className="scroll-thin bg-muted/80 p-4 rounded-md text-sm max-w-full max-h-96 overflow-auto text-white mt-2 relative">
+                <button
+                  className="absolute top-0 right-0 m-4"
+                  onClick={() =>
+                    navigator.clipboard.writeText(
+                      JSON.stringify(characterCard, null, 2)
+                    )
+                  }
+                >
+                  <Copy className="size-4 text-secondary-foreground/70 hover:text-secondary-foreground/90" />
+                </button>
+                <pre className="whitespace-pre-wrap break-words scroll-thin">
+                  {JSON.stringify(characterCard, null, 2)}
+                </pre>
+              </div>
+            </div>
+          </>
+        )}
+
+        {selectedView === "Rooms" && (
+          <>
+            <Label className="font-semibold text-xl text-gray-200 mb-4">
+              Rooms Where This Agent Is Present:
+            </Label>
+            <div className="mt-4">
+              {roomsLoading ? (
+                <p className="text-center">Loading rooms...</p>
+              ) : rooms.length === 0 ? (
+                <p className="text-center">No rooms found for this agent.</p>
+              ) : (
+                <div className="overflow-auto bg-secondary/20 px-4 pt-2 pb-4 rounded-[calc(var(--radius))]">
+                  <Table className="w-full">
+                    <TableHeader>
+                      <TableRow className="border-b border-gray-300 dark:border-gray-400">
+                        <TableHead className="text-base font-bold text-gray-700 dark:text-gray-200 pl-6 py-4 w-[400px]">
+                          Name
+                        </TableHead>
+                        <TableHead className="text-center text-base font-bold text-gray-700 dark:text-gray-200 pl-6 py-4 w-[400px]">
+                          Type
+                        </TableHead>
+                        <TableHead className="text-center text-base font-bold text-gray-700 dark:text-gray-200 pl-6 py-4 w-[400px]">
+                          Network
+                        </TableHead>
+                        <TableHead className="text-center text-base font-bold text-gray-700 dark:text-gray-200 pl-6 py-4 w-[400px]">
+                          Created At
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {rooms.map((room) => (
+                        <TableRow key={room.id} className="hover:bg-muted">
+                          <TableCell className="px-4 py-2">
+                            {room.name}
+                          </TableCell>
+                          <TableCell className="px-4 py-2 text-center">
+                            {roomTypeMapping[room.type_id]}
+                          </TableCell>
+                          <TableCell className="px-4 py-2">
+                            {room.chain_id &&
+                              chainMetadata[room.chain_id]?.icon && (
+                                <Image
+                                  src={chainMetadata[room.chain_id]?.icon}
+                                  alt={chainMetadata[room.chain_id]?.name}
+                                  className="size-6 mx-auto"
+                                  width={2000}
+                                  height={2000}
+                                />
+                              )}
+                          </TableCell>
+                          <TableCell className="px-4 py-2 text-center">
+                            {formatDistanceToNow(new Date(room.created_at), {
+                              addSuffix: true,
+                            })}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </div>
-          )}
-
-          {/* Display Bio, Lore, Desc, and Knowledge as read-only text areas */}
-          {(characterCard?.bio ||
-            characterCard?.lore ||
-            characterCard?.desc ||
-            characterCard?.knowledge) && (
-            <div className="space-y-4">
-              {characterCard?.bio && (
-                <div>
-                  <Label className="font-semibold text-lg text-gray-100">Bio:</Label>
-                  <Textarea
-                    readOnly
-                    className="w-full p-2 text-base"
-                    rows={4}
-                    value={displayArray(characterCard?.bio)}
-                  />
-                </div>
-              )}
-              {characterCard?.lore && (
-                <div>
-                  <Label className="font-semibold text-lg text-gray-100">Lore:</Label>
-                  <Textarea
-                    readOnly
-                    className="w-full p-2 text-base"
-                    rows={4}
-                    value={displayArray(characterCard?.lore)}
-                  />
-                </div>
-              )}
-              {characterCard?.desc && (
-                <div>
-                  <Label className="font-semibold text-lg text-gray-100">Description:</Label>
-                  <Textarea
-                    readOnly
-                    className="w-full p-2 text-base"
-                    rows={4}
-                    value={displayArray(characterCard?.desc)}
-                  />
-                </div>
-              )}
-              {characterCard?.knowledge && (
-                <div>
-                  <Label className="font-semibold text-lg text-gray-100">Knowledge:</Label>
-                  <Textarea
-                    readOnly
-                    className="w-full p-2 text-base"
-                    rows={4}
-                    value={displayArray(characterCard?.knowledge)}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+          </>
+        )}
       </Card>
     </div>
   );
