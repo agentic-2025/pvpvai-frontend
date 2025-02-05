@@ -1,10 +1,10 @@
 "use client";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { publicChatMessageInputSchema } from "@/lib/backend.types";
 import { cn } from "@/lib/utils";
 import { KeyboardEvent, useLayoutEffect, useRef, useState } from "react";
-import { PublicChatLine } from "./PublicChatLine";
-import { publicChatMessageInputSchema } from "@/lib/backend.types";
 import { z } from "zod";
+import { PublicChatLine } from "./PublicChatLine";
 
 const MAX_MESSAGE_LENGTH = 500;
 
