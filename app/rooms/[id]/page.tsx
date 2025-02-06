@@ -19,7 +19,6 @@ import supabase from "@/lib/config";
 import { Tables } from "@/lib/database.types";
 import {
   useRoundAgentMessages,
-  useRoundUserMessages,
 } from "@/lib/queries/messageQueries";
 import { AgentChat } from "@/stories/AgentChat";
 import { BuySellGameAvatarInteraction } from "@/stories/BuySellGameAvatarInteraction";
@@ -100,37 +99,37 @@ const useRoundAgents = (roundId: number) => {
   });
 };
 
-const useRoundGameMaster = (roundId: number) => {
-  return useQuery({
-    queryKey: ["roundGameMaster", roundId],
-    queryFn: async () => {
-      const { data: round, error: roundError } = await supabase
-        .from("rounds")
-        .select("game_master_id")
-        .eq("id", roundId)
-        .single();
-      if (roundError) throw roundError;
+// const useRoundGameMaster = (roundId: number) => {
+//   return useQuery({
+//     queryKey: ["roundGameMaster", roundId],
+//     queryFn: async () => {
+//       const { data: round, error: roundError } = await supabase
+//         .from("rounds")
+//         .select("game_master_id")
+//         .eq("id", roundId)
+//         .single();
+//       if (roundError) throw roundError;
 
-      if (!round?.game_master_id) return null;
+//       if (!round?.game_master_id) return null;
 
-      const { data: gm, error: gmError } = await supabase
-        .from("agents")
-        .select(`*`)
-        .eq("id", round.game_master_id)
-        .single();
-      if (gmError) {
-        console.error("Error fetching game master", gmError);
-        throw gmError;
-      }
+//       const { data: gm, error: gmError } = await supabase
+//         .from("agents")
+//         .select(`*`)
+//         .eq("id", round.game_master_id)
+//         .single();
+//       if (gmError) {
+//         console.error("Error fetching game master", gmError);
+//         throw gmError;
+//       }
 
-      return gm;
-    },
-    enabled: !!roundId,
-  });
-};
+//       return gm;
+//     },
+//     enabled: !!roundId,
+//   });
+// };
 
 function RoundDetailsAndNavigation({
-  participants,
+
   roomData,
   roundList,
   currentRoundIndex,
@@ -139,7 +138,6 @@ function RoundDetailsAndNavigation({
   isLoadingRounds,
   setCurrentRoundIndex,
 }: {
-  participants: number;
   roomData: Tables<"rooms">;
   roundList: { id: number; created_at: string }[];
   currentRoundIndex: number;
@@ -240,23 +238,23 @@ export default function RoomDetailPage() {
 
   const { data: roundAgentMessages, isLoading: isLoadingRoundAgentMessages } =
     useRoundAgentMessages(currentRoundId);
-  const {
-    data: roundPublicChatMessages,
-    isLoading: isLoadingPublicChatMessages,
-  } = useRoundUserMessages(currentRoundId);
+  // const {
+  //   data: roundPublicChatMessages,
+  //   isLoading: isLoadingPublicChatMessages,
+  // } = useRoundUserMessages(currentRoundId);
   const { data: roundAgents, isLoading: isLoadingAgents } =
     useRoundAgents(currentRoundId);
-  const { data: gameMaster, isLoading: isLoadingGM } =
-    useRoundGameMaster(currentRoundId);
+  // const { data: gameMaster, isLoading: isLoadingGM } =
+  //   useRoundGameMaster(currentRoundId);
 
-  // Loading state
-  const roomQueriesLoading =
-    isLoadingRoom ||
-    isLoadingRounds ||
-    isLoadingRoundAgentMessages ||
-    // isLoadingRoundUserMessages ||
-    isLoadingAgents ||
-    isLoadingGM;
+  // // Loading state
+  // const roomQueriesLoading =
+  //   isLoadingRoom ||
+  //   isLoadingRounds ||
+  //   isLoadingRoundAgentMessages ||
+  //   // isLoadingRoundUserMessages ||
+  //   isLoadingAgents ||
+  //   isLoadingGM;
 
   // --- WebSocket Logic ---
   const socketUrl = `${process.env.NEXT_PUBLIC_BACKEND_WS_URL}`;
@@ -432,16 +430,16 @@ export default function RoomDetailPage() {
       </div>
     );
   return (
-    <div className="flex items-center justify-center h-screen">
-      <div className="max-w-screen-2xl mx-auto p-4 bg-secondary/50 rounded-xl">
-        <div className="flex gap-6 h-[calc(100vh-4rem)]">
+    <div className="flex items-center justify-center h-screen w-full">
+      <div className="max-w-screen-2xl w-full mx-auto p-4 bg-secondary/50 rounded-xl">
+        <div className="w-full flex gap-6 h-[calc(100vh-4rem)]">
           {/* Left Section: Room Info, Agents, and Agent Chat */}
           <div className="w-[65%] flex flex-col gap-6">
             <h1 className="text-4xl font-bold truncate text-center">
               {roomData.name}
             </h1>
             {/* Agents Display (from current round) */}
-            <div className="h-[60%] overflow-y-auto bg-[#1c1917] rounded-lg p-3">
+            <div className="w-full h-[60%] overflow-y-auto bg-[#1c1917] rounded-lg p-3">
               <div className="bg-[#262626] flex items-center justify-center h-full rounded-md">
                 <div className="flex flex-wrap justify-center items-center gap-10">
                   {roundAgents && Object.values(roundAgents).length > 0 ? (
