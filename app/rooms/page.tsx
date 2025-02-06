@@ -40,7 +40,7 @@ const RoomsPage: FC = () => {
           // .eq("rounds.active", true)
           // .order("rounds.created_at", { ascending: false })
           // .limit(1, { foreignTable: "rounds" })
-          
+
           .throwOnError();
 
         if (error) {

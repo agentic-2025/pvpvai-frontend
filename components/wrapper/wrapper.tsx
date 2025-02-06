@@ -8,17 +8,24 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import "@rainbow-me/rainbowkit/styles.css";
 import { getDefaultConfig, RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
-import { createPublicClient, http } from "viem";
+import { createPublicClient, custom, createWalletClient, http } from "viem";
 import { baseSepolia } from "viem/chains";
 
 export const wagmiConfig = createPublicClient({
   chain: baseSepolia,
-  transport: http(),
+  transport: http(
+    `https://base-sepolia.g.alchemy.com/v2/wY-X7zwF8AcHhyx5r7bN24reZkc_E2Pd`
+  ),
 });
 
-const config = getDefaultConfig({
+export const walletClient = createWalletClient({
+  chain: baseSepolia,
+  transport: custom(window.ethereum),
+});
+
+export const config = getDefaultConfig({
   appName: "My RainbowKit App",
-  projectId: "YOUR_PROJECT_ID",
+  projectId: `${process.env.NEXT_PUBLIC_RAINBOWKIT_PROJECT_ID}`,
   chains: [baseSepolia],
   ssr: true, // If your dApp uses server side rendering (SSR)
 });

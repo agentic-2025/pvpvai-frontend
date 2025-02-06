@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -10,7 +11,6 @@ import { cn, generateRandomColor, getChainMetadata } from "@/lib/utils";
 import { OnchainKitProvider } from "@coinbase/onchainkit";
 import { getTokens } from "@coinbase/onchainkit/api";
 import { Token, TokenImage } from "@coinbase/onchainkit/token";
-import { useEffect, useState } from "react";
 import {
   arbitrum,
   arbitrumSepolia,
@@ -27,6 +27,11 @@ import solanaIcon from "./assets/crypto/solana-full-color.svg";
 import { ChainButton } from "./ChainButton";
 import { PvPRuleCard } from "./PvPRuleCard";
 import { SupportedChains } from "@/lib/consts";
+import { readContract } from "viem/actions";
+import { coreAbi, coreAddress } from "@/constants/contact_abi/core-abi";
+import { wagmiConfig, walletClient } from "@/components/wrapper/wrapper";
+import { formatEther } from "viem";
+import { useAccount } from "wagmi";
 
 type PvPRule =
   | "SILENCE"
@@ -74,7 +79,7 @@ export function CreateRoomModal({
   const [createRoomFormState, setCreateRoomFormState] =
     useState<CreateRoomState>(
       initialState || {
-        step: 2, // Start at step 2 since we removed draft logic
+        step: 2,
         pvpEnabled: true,
         pvpRules: [
           "SILENCE",
@@ -93,7 +98,7 @@ export function CreateRoomModal({
         selectedAgents: [],
       }
     );
-  console.log("initialState", initialState);
+
   const [roomTypes, setRoomTypes] = useState<Tables<"room_types">[]>([]);
   const [loadingRoomTypes, setLoadingRoomTypes] = useState(true);
   const [agents, setAgents] = useState<Tables<"agents">[]>([]);
@@ -101,7 +106,6 @@ export function CreateRoomModal({
   const [tokenSearchQuery, setTokenSearchQuery] = useState("");
   const [loadingAgents, setLoadingAgents] = useState(true);
   const [chain, setChain] = useState<SupportedChains>(base);
-
   const [settings, setSettings] = useState<RoomSettings>(
     createRoomFormState.settings || {
       name: "",
@@ -110,11 +114,13 @@ export function CreateRoomModal({
       round_time: 300,
     }
   );
-
   const [tokenInfo, setTokenInfo] = useState<Token | undefined>();
   const [tokenSearchResults, setTokenSearchResults] = useState<Token[]>([]);
   const [loadingToken, setLoadingToken] = useState(false);
   const [tokenError, setTokenError] = useState<string>();
+  const { address: userAddress } = useAccount();
+  // New state to hold fees from the contract
+  const [fees, setFees] = useState<any>(null);
 
   const handleSettingsChange = (updates: Partial<RoomSettings>) => {
     const newSettings = { ...settings, ...updates };
@@ -124,58 +130,47 @@ export function CreateRoomModal({
 
   // Fetch room types
   useEffect(() => {
-    const fetchRoomTypes = async () => {
-      const { data, error } = await supabase
-        .from("room_types")
-        .select("*")
-        .order("id");
-      if (error) {
-        console.error("Error fetching room types:", error);
-        return;
-      }
-      setRoomTypes(data || []);
-      setLoadingRoomTypes(false);
-    };
-    fetchRoomTypes();
+    supabase
+      .from("room_types")
+      .select("*")
+      .order("id")
+      .then(({ data, error }) => {
+        if (!error) {
+          setRoomTypes(data || []);
+          setLoadingRoomTypes(false);
+        }
+      });
   }, []);
 
   // Fetch agents
   useEffect(() => {
-    const fetchAgents = async () => {
-      const { data, error } = await supabase
-        .from("agents")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) {
-        console.error("Error fetching agents:", error);
-        return;
-      }
-      setAgents(data || []);
-      setLoadingAgents(false);
-    };
-    fetchAgents();
+    supabase
+      .from("agents")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (!error) {
+          setAgents(data || []);
+          setLoadingAgents(false);
+        }
+      });
   }, []);
 
-  // Load token info (using onchainkit)
+  // Load token info
   useEffect(() => {
     const loadTokenInfo = async (address: string) => {
-      if (tokenSearchQuery) {
+      if (address) {
         try {
           setLoadingToken(true);
-          const tokens = await getTokens({
-            limit: "50",
-            search: address,
-          });
+          const tokens = await getTokens({ limit: "50", search: address });
           if ("message" in tokens) {
-            console.log("error useEffect", tokens);
             setTokenError(tokens.message);
           } else {
             setTokenSearchResults(tokens);
-            setLoadingToken(false);
             setTokenError(tokens.length === 0 ? "Token not found" : undefined);
           }
-        } catch (error) {
-          console.error("Error loading token info:", error);
+          setLoadingToken(false);
+        } catch (error: any) {
           setTokenError("Failed to load token information: " + error);
         }
       }
@@ -183,53 +178,93 @@ export function CreateRoomModal({
     loadTokenInfo(tokenSearchQuery);
   }, [tokenSearchQuery]);
 
+  // Fetch fees from the contract
+  const getFees = async () => {
+    try {
+      const result = await readContract(wagmiConfig, {
+        abi: coreAbi,
+        address: coreAddress,
+        functionName: "getFees",
+      });
+      return result;
+    } catch (error) {
+      console.error("Error fetching fees:", error);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    getFees()
+      .then((result) => {
+        setFees(result);
+      })
+      .catch((error) => console.error("Error in getFees useEffect:", error));
+  }, []);
+
   const handleCreateRoom = async () => {
     if (!createRoomFormState.settings) return;
-
     const chainMeta = getChainMetadata(chain.id);
-    // Compute roundEndsOn as current time plus round_time (in seconds)
     const roundEndsOn = new Date(
       Date.now() + createRoomFormState.settings.round_time * 1000
     ).toISOString();
 
+    // First, perform the deposit call on the contract
+    let transactionHash: string | null = null;
+    try {
+      if (fees && userAddress) {
+        const { request } = await wagmiConfig.simulateContract({
+          abi: coreAbi,
+          address: coreAddress,
+          functionName: "deposit",
+          value: fees[1],
+          account: userAddress,
+        });
+
+        const depositTx = await walletClient.writeContract(request);
+        console.log("Deposit successful:", depositTx);
+        transactionHash = depositTx;
+      } else {
+        throw new Error("Fees or user address not loaded");
+      }
+    } catch (error) {
+      console.error("Error during deposit:", error);
+      return; // Exit if deposit fails.
+    }
+
     const payload = {
       name: createRoomFormState.settings.name,
       room_type: createRoomFormState.roomType === 1 ? "buy_sell" : "chat",
-      image_url:
-        createRoomFormState.settings.image_url &&
-        createRoomFormState.settings.image_url.startsWith("http")
-          ? createRoomFormState.settings.image_url
-          : "https://example.com/default-room.png",
+      image_url: createRoomFormState.settings.image_url?.startsWith("http")
+        ? createRoomFormState.settings.image_url
+        : "https://example.com/default-room.png",
       color: createRoomFormState.settings.color,
       chain_id: String(chain.id),
       chain_family: chainMeta.family,
       contract_address: "0x1234...", // Replace with actual contract address if needed.
-      // Optional top-level round_time if desired.
       round_time: createRoomFormState.settings.round_time,
       room_config: {
         round_duration: createRoomFormState.settings.round_time,
         round_ends_on: roundEndsOn,
         pvp_config: {
           enabled: createRoomFormState.pvpEnabled,
-          allowed_functions: createRoomFormState.pvpRules, // Added allowed_functions
+          allowed_functions: createRoomFormState.pvpRules,
           enabled_rules: createRoomFormState.pvpRules,
         },
         features: {
           public_chat: true,
         },
       },
-      // token must be a valid wallet address per the regex.
       token: tokenInfo?.address || "0x0000000000000000000000000000000000000000",
-      token_webhook: "https://example.com/webhook", // Must be a valid URL.
-      // agents: the schema expects an object mapping keys to an object with wallet and webhook.
+      token_webhook: "https://example.com/webhook",
       agents: {
         default: {
-          wallet: "0x0000000000000000000000000000000000000000", // Fallback wallet address.
-          webhook: "https://example.com/agent-webhook", // Fallback webhook URL.
+          wallet: "0x0000000000000000000000000000000000000000",
+          webhook: "https://example.com/agent-webhook",
         },
       },
-      gm: "0x0000000000000000000000000000000000000000", // Fallback GM wallet address.
-      transaction_hash: "0x" + "0".repeat(64), // Fallback transaction hash.
+      gm: "0x0000000000000000000000000000000000000000",
+      // Pass the transaction hash from the deposit call
+      transaction_hash: transactionHash,
     };
 
     try {
@@ -239,51 +274,16 @@ export function CreateRoomModal({
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-Authorization-Signature": "mock_signature", // TODO: Add real signature
+            "X-Authorization-Signature": "mock_signature", // Replace with real signature if needed.
           },
           body: JSON.stringify(payload),
         }
       );
-
-      if (!response.ok) {
-        throw new Error("Failed to create room");
-      }
-
+      if (!response.ok) throw new Error("Failed to create room");
       onOpenChange(false);
     } catch (error) {
       console.error("Error creating room:", error);
     }
-  };
-
-  const renderStep = () => {
-    return (
-      <div className="flex flex-col h-full">
-        <div className="flex-1 overflow-y-auto p-6">{renderStepContent()}</div>
-        <div className="flex justify-between p-6 border-t border-border bg-background">
-          <button
-            className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={() =>
-              setCreateRoomFormState((s) => ({ ...s, step: s.step - 1 }))
-            }
-            disabled={createRoomFormState.step <= 2}
-          >
-            Back
-          </button>
-          <button
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={
-              createRoomFormState.step === 8
-                ? handleCreateRoom
-                : () =>
-                    setCreateRoomFormState((s) => ({ ...s, step: s.step + 1 }))
-            }
-            disabled={!canProceedToNextStep()}
-          >
-            {createRoomFormState.step === 8 ? "Create Room" : "Next"}
-          </button>
-        </div>
-      </div>
-    );
   };
 
   const renderStepContent = () => {
@@ -341,78 +341,81 @@ export function CreateRoomModal({
     );
   };
 
-  const renderChainSelection = () => {
-    return (
-      <div>
-        <div className="font-medium text-green-300">Testnet</div>
-        <div className="grid grid-cols-2 gap-4">
-          <ChainButton
-            iconUrl={baseIcon.src}
-            selected={chain.id === baseSepolia.id}
-            className="bg-[#0052FF] w-full h-[60px]"
-            iconClassName="w-[160px] h-[40px]"
-            onClick={() => setChain(baseSepolia)}
-          />
-          <ChainButton
-            iconUrl={arbitrumIcon.src}
-            selected={chain.id === arbitrumSepolia.id}
-            className="bg-[#28A0F0] w-full h-[60px]"
-            iconClassName="w-[160px] h-[40px]"
-            onClick={() => setChain(arbitrumSepolia)}
-          />
-          <ChainButton
-            iconUrl={flowIcon.src}
-            selected={chain.id === flowTestnet.id}
-            className="bg-[#00EF8B] w-full h-[60px]"
-            iconClassName="w-[160px] h-[40px]"
-            onClick={() => setChain(flowTestnet)}
-          />
-          <ChainButton
-            iconUrl={solanaIcon.src}
-            selected={false}
-            className="bg-[#512DA8] w-full h-[60px] opacity-50 cursor-not-allowed"
-            iconClassName="w-[160px] h-[40px]"
-          />
-        </div>
-        <div className="font-medium text-red-300">Mainnet</div>
-        <div className="grid grid-cols-2 gap-4">
-          <ChainButton
-            iconUrl={baseIcon.src}
-            selected={chain.id === base.id}
-            className="bg-[#0052FF] w-full h-[60px]"
-            iconClassName="w-[160px] h-[40px]"
-            onClick={() => setChain(base)}
-          />
-          <ChainButton
-            iconUrl={arbitrumIcon.src}
-            selected={chain.id === arbitrum.id}
-            className="bg-[#28A0F0] w-full h-[60px]"
-            iconClassName="w-[160px] h-[40px]"
-            onClick={() => setChain(arbitrum)}
-          />
-          <ChainButton
-            iconUrl={flowIcon.src}
-            selected={chain.id === flowMainnet.id}
-            className="bg-[#00EF8B] w-full h-[60px]"
-            iconClassName="w-[160px] h-[40px]"
-            onClick={() => setChain(flowMainnet)}
-          />
-          <ChainButton
-            iconUrl={solanaIcon.src}
-            selected={false}
-            className="bg-[#512DA8] w-full h-[60px] opacity-50 cursor-not-allowed"
-            iconClassName="w-[160px] h-[40px]"
-          />
-        </div>
+  const renderChainSelection = () => (
+    <div>
+      <div className="font-medium text-green-300">Testnet</div>
+      <div className="grid grid-cols-2 gap-4">
+        <ChainButton
+          iconUrl={baseIcon.src}
+          selected={chain.id === baseSepolia.id}
+          className="bg-[#0052FF] w-full h-[60px]"
+          iconClassName="w-[160px] h-[40px]"
+          onClick={() => setChain(baseSepolia)}
+        />
+        <ChainButton
+          disabled={true}
+          iconUrl={arbitrumIcon.src}
+          selected={chain.id === arbitrumSepolia.id}
+          className="bg-[#28A0F0] w-full h-[60px]"
+          iconClassName="w-[160px] h-[40px]"
+          onClick={() => setChain(arbitrumSepolia)}
+        />
+        <ChainButton
+          disabled={true}
+          iconUrl={flowIcon.src}
+          selected={chain.id === flowTestnet.id}
+          className="bg-[#00EF8B] w-full h-[60px]"
+          iconClassName="w-[160px] h-[40px]"
+          onClick={() => setChain(flowTestnet)}
+        />
+        <ChainButton
+          disabled={true}
+          iconUrl={solanaIcon.src}
+          selected={false}
+          className="bg-[#512DA8] w-full h-[60px] opacity-50 cursor-not-allowed"
+          iconClassName="w-[160px] h-[40px]"
+        />
       </div>
-    );
-  };
+      <div className="font-medium text-red-300">Mainnet</div>
+      <div className="grid grid-cols-2 gap-4">
+        <ChainButton
+          iconUrl={baseIcon.src}
+          selected={chain.id === base.id}
+          className="bg-[#0052FF] w-full h-[60px]"
+          iconClassName="w-[160px] h-[40px]"
+          onClick={() => setChain(base)}
+        />
+        <ChainButton
+          disabled={true}
+          iconUrl={arbitrumIcon.src}
+          selected={chain.id === arbitrum.id}
+          className="bg-[#28A0F0] w-full h-[60px]"
+          iconClassName="w-[160px] h-[40px]"
+          onClick={() => setChain(base)}
+        />
+        <ChainButton
+          disabled={true}
+          iconUrl={flowIcon.src}
+          selected={chain.id === flowMainnet.id}
+          className="bg-[#00EF8B] w-full h-[60px]"
+          iconClassName="w-[160px] h-[40px]"
+          onClick={() => setChain(flowMainnet)}
+        />
+        <ChainButton
+          disabled={true}
+          iconUrl={solanaIcon.src}
+          selected={false}
+          className="bg-[#512DA8] w-full h-[60px] opacity-50 cursor-not-allowed"
+          iconClassName="w-[160px] h-[40px]"
+        />
+      </div>
+    </div>
+  );
 
   const renderAgentSelection = () => {
     const filteredAgents = agents.filter((agent) =>
       agent.display_name?.toLowerCase().includes(searchAgentQuery.toLowerCase())
     );
-
     const toggleAgent = (agentId: number) => {
       setCreateRoomFormState((s) => {
         const newSelectedAgents = s.selectedAgents.includes(agentId)
@@ -427,7 +430,7 @@ export function CreateRoomModal({
     return (
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between h-[64px] bg-muted rounded-lg">
-          <div className="flex gap-2 p-2 overflow-x-auto overflow-y-hidden">
+          <div className="flex gap-2 p-2 overflow-x-auto">
             {createRoomFormState.selectedAgents.map((agentId) => {
               const agent = agents.find((a) => a.id === agentId);
               if (!agent) return null;
@@ -535,16 +538,14 @@ export function CreateRoomModal({
             className="bg-muted border-border"
           />
         </div>
-        <div>
-          <ColorPicker
-            label="Room Color"
-            value={settings.color}
-            onChange={(color) => handleSettingsChange({ color })}
-            generateRandomColor={() =>
-              handleSettingsChange({ color: generateRandomColor(true) })
-            }
-          />
-        </div>
+        <ColorPicker
+          label="Room Color"
+          value={settings.color}
+          onChange={(color) => handleSettingsChange({ color })}
+          generateRandomColor={() =>
+            handleSettingsChange({ color: generateRandomColor(true) })
+          }
+        />
         <div className="space-y-2">
           <Label>Round Time</Label>
           <div className="flex gap-2">
@@ -571,77 +572,64 @@ export function CreateRoomModal({
     if (createRoomFormState.roomType === 3) {
       return (
         <div className="flex flex-col gap-6">
-          <p className="text-gray-400">
-            There&apos;s no settings specific for &quot;Just Chat&quot;. Have
-            fun!
-          </p>
+          <p className="text-gray-400">{`No settings for "Just Chat".`}</p>
         </div>
       );
     }
-
     if (
       createRoomFormState.roomType === 1 ||
       createRoomFormState.roomType === 2
     ) {
-      console.log("renderTypeSpecificSettings");
-      console.log(tokenSearchResults);
-      console.log(chain);
-      console.log(process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY);
-
       return (
         <OnchainKitProvider
           chain={chain}
           apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
         >
           <div className="flex flex-col gap-6">
-            <div className="space-y-4">
-              {tokenInfo ? (
-                <div className="w-4/6 mx-auto">
-                  <div className="flex justify-center items-stretch gap-4 py-4 px-3 border-2 border-gray-400 rounded-lg">
-                    <div className="flex items-center">
-                      <TokenImage token={tokenInfo} size={64} />
-                    </div>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="font-bold">${tokenInfo.symbol}</span>
-                      <span className="text-md text-muted-foreground">
-                        {tokenInfo.name}
-                      </span>
-                      <span className="text-xs text-muted-foreground font-mono">
-                        {tokenInfo.address}
-                      </span>
-                    </div>
+            {tokenInfo ? (
+              <div className="w-4/6 mx-auto">
+                <div className="flex justify-center items-stretch gap-4 py-4 px-3 border-2 border-gray-400 rounded-lg">
+                  <div className="flex items-center">
+                    <TokenImage token={tokenInfo} size={64} />
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-bold">${tokenInfo.symbol}</span>
+                    <span className="text-md text-muted-foreground">
+                      {tokenInfo.name}
+                    </span>
+                    <span className="text-xs text-muted-foreground font-mono">
+                      {tokenInfo.address}
+                    </span>
                   </div>
                 </div>
-              ) : (
-                <div className="max-w-sm mx-auto">
-                  <div className="flex items-stretch gap-4 py-4 px-3 border-2 border-gray-400 rounded-lg">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 rounded-full border-2 border-dashed border-muted-foreground" />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <div className="w-20 h-5 rounded border-2 border-dashed border-muted-foreground" />
-                      <div className="w-32 h-4 rounded border-2 border-dashed border-muted-foreground" />
-                      <div className="w-40 h-4 rounded border-2 border-dashed border-muted-foreground" />
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div className="flex gap-2">
-                <Input
-                  id="tokenAddress"
-                  value={tokenSearchQuery}
-                  onChange={(e) => setTokenSearchQuery(e.target.value)}
-                  placeholder="Search by address or token name..."
-                  className="bg-muted border-border"
-                />
-                {loadingToken && (
-                  <div className="text-sm text-gray-400">Loading...</div>
-                )}
               </div>
-              {tokenError && (
-                <p className="text-sm text-destructive mt-1">{tokenError}</p>
+            ) : (
+              <div className="max-w-sm mx-auto">
+                <div className="flex items-stretch gap-4 py-4 px-3 border-2 border-gray-400 rounded-lg">
+                  <div className="w-10 h-10 rounded-full border-2 border-dashed border-muted-foreground" />
+                  <div className="flex flex-col gap-1.5">
+                    <div className="w-20 h-5 rounded border-2 border-dashed border-muted-foreground" />
+                    <div className="w-32 h-4 rounded border-2 border-dashed border-muted-foreground" />
+                    <div className="w-40 h-4 rounded border-2 border-dashed border-muted-foreground" />
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Input
+                id="tokenAddress"
+                value={tokenSearchQuery}
+                onChange={(e) => setTokenSearchQuery(e.target.value)}
+                placeholder="Search by address or token name..."
+                className="bg-muted border-border"
+              />
+              {loadingToken && (
+                <div className="text-sm text-gray-400">Loading...</div>
               )}
             </div>
+            {tokenError && (
+              <p className="text-sm text-destructive mt-1">{tokenError}</p>
+            )}
             {tokenSearchResults.length > 0 && (
               <ScrollArea className="h-[250px] rounded-md border border-border">
                 <div className="p-2 space-y-2">
@@ -725,7 +713,6 @@ export function CreateRoomModal({
             </Label>
           </div>
         </div>
-
         <ScrollArea className="h-[500px] pr-4">
           <div className="space-y-4 p-4">
             <h3 className="text-lg font-medium text-gray-300">
@@ -749,7 +736,6 @@ export function CreateRoomModal({
               ))}
             </div>
           </div>
-
           <div className="space-y-4 mt-8 p-4">
             <h3 className="text-lg font-medium text-gray-300">
               Moderate Impact Rules
@@ -772,7 +758,6 @@ export function CreateRoomModal({
               ))}
             </div>
           </div>
-
           <div className="space-y-4 mt-8 p-4">
             <h3 className="text-lg font-medium text-gray-300">
               High Impact Rules
@@ -800,43 +785,47 @@ export function CreateRoomModal({
     );
   };
 
-  const renderConfirmation = () => {
-    return (
-      <div className="flex flex-col gap-6">
-        <div className="p-4 text-foreground rounded-lg border-2 border-gray-400 flex flex-col gap-2 text-center">
-          <div className="text-muted-foreground">
-            Creating this room will cost
-          </div>
-          <div className="text-foreground text-xl">
-            0.1 {chain.nativeCurrency.symbol}
-          </div>
-          <div className="text-sm text-muted-foreground">
-            2% of all fees generated in room will go to you
-          </div>
+  // Updated confirmation render to display fees
+  const renderConfirmation = () => (
+    <div className="flex flex-col gap-6">
+      <div className="p-4 text-foreground rounded-lg border-2 border-gray-400 flex flex-col gap-2 text-center">
+        <div className="text-muted-foreground">
+          Creating this room will cost
+        </div>
+        <div className="text-foreground text-xl">
+          {fees ? formatEther(fees[1]) : "Loading..."}{" "}
+          {chain.nativeCurrency.symbol}
+        </div>
+        <div className="text-sm text-muted-foreground">
+          2% of all fees generated in room will go to you
         </div>
       </div>
-    );
-  };
+    </div>
+  );
 
   const canProceedToNextStep = () => {
     switch (createRoomFormState.step) {
-      case 2: // Room Type
+      case 2:
         return !!createRoomFormState.roomType;
-      case 3: // Chain
+      case 3:
         return !!chain;
-      case 4: // Agents
+      case 4:
         return createRoomFormState.selectedAgents.length > 0;
-      case 5: // Room Settings
-        if (createRoomFormState.roomType === 3 || 4) {
+      case 5:
+        if (
+          createRoomFormState.roomType === 3 ||
+          createRoomFormState.roomType === 4
+        )
           return true;
-        }
         return !!(settings.name && settings.image_url);
-      case 6: // Type Specific Settings
-        if (createRoomFormState.roomType === 3 || 4) {
+      case 6:
+        if (
+          createRoomFormState.roomType === 3 ||
+          createRoomFormState.roomType === 4
+        )
           return true;
-        }
         return !!tokenInfo;
-      case 7: // PvP Settings (if applicable)
+      case 7:
         return true;
       default:
         return true;
@@ -844,34 +833,39 @@ export function CreateRoomModal({
   };
 
   const getStepTitle = () => {
-    const stepName = (() => {
-      switch (createRoomFormState.step) {
-        case 2:
-          return "Select Room Type";
-        case 3:
-          return "Select Chain";
-        case 4:
-          return "Select Agents";
-        case 5:
-          return "Room Settings";
-        case 6:
-          if (createRoomFormState.roomType === 3) {
-            return "Chat Room Settings";
-          } else if (createRoomFormState.roomType === 1) {
-            return "Buy/Sell Room Settings";
-          } else if (createRoomFormState.roomType === 2) {
-            return "Long/Short Room Settings";
-          }
-          return "Room Configuration";
-        case 7:
-          return "PvP Settings";
-        case 8:
-          return "Confirm Room Creation";
-        default:
-          return "";
-      }
-    })();
-
+    let stepName = "";
+    switch (createRoomFormState.step) {
+      case 2:
+        stepName = "Select Room Type";
+        break;
+      case 3:
+        stepName = "Select Chain";
+        break;
+      case 4:
+        stepName = "Select Agents";
+        break;
+      case 5:
+        stepName = "Room Settings";
+        break;
+      case 6:
+        stepName =
+          createRoomFormState.roomType === 3
+            ? "Chat Room Settings"
+            : createRoomFormState.roomType === 1
+            ? "Buy/Sell Room Settings"
+            : createRoomFormState.roomType === 2
+            ? "Long/Short Room Settings"
+            : "Room Configuration";
+        break;
+      case 7:
+        stepName = "PvP Settings";
+        break;
+      case 8:
+        stepName = "Confirm Room Creation";
+        break;
+      default:
+        stepName = "";
+    }
     return (
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-2">
@@ -895,7 +889,37 @@ export function CreateRoomModal({
         <DialogTitle className="text-2xl font-semibold">
           {getStepTitle()}
         </DialogTitle>
-        {renderStep()}
+        <div className="flex flex-col h-full">
+          <div className="flex-1 overflow-y-auto p-6">
+            {renderStepContent()}
+          </div>
+          <div className="flex justify-between p-6 border-t border-border bg-background">
+            <button
+              className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() =>
+                setCreateRoomFormState((s) => ({ ...s, step: s.step - 1 }))
+              }
+              disabled={createRoomFormState.step <= 2}
+            >
+              Back
+            </button>
+            <button
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={
+                createRoomFormState.step === 8
+                  ? handleCreateRoom
+                  : () =>
+                      setCreateRoomFormState((s) => ({
+                        ...s,
+                        step: s.step + 1,
+                      }))
+              }
+              disabled={!canProceedToNextStep()}
+            >
+              {createRoomFormState.step === 8 ? "Create Room" : "Next"}
+            </button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

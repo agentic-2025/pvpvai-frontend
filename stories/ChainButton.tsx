@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import Image from "next/image";
 
 interface ChainButtonProps {
+  disabled?: boolean;
   iconUrl: string;
   selected?: boolean;
   className?: string;
@@ -10,6 +11,7 @@ interface ChainButtonProps {
 }
 
 export function ChainButton({
+  disabled,
   iconUrl,
   selected = false,
   className,
@@ -25,6 +27,7 @@ export function ChainButton({
     >
       <button
         onClick={onClick}
+        disabled={disabled}
         className={cn(
           "flex items-center justify-center rounded-lg px-6 py-4 transition-all",
           "hover:opacity-80 active:opacity-70",
