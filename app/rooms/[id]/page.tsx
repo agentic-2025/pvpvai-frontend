@@ -17,9 +17,7 @@ import {
 } from "@/lib/backend.types";
 import supabase from "@/lib/config";
 import { Tables } from "@/lib/database.types";
-import {
-  useRoundAgentMessages,
-} from "@/lib/queries/messageQueries";
+import { useRoundAgentMessages } from "@/lib/queries/messageQueries";
 import { AgentChat } from "@/stories/AgentChat";
 import { BuySellGameAvatarInteraction } from "@/stories/BuySellGameAvatarInteraction";
 import { useQuery } from "@tanstack/react-query";
@@ -129,7 +127,6 @@ const useRoundAgents = (roundId: number) => {
 // };
 
 function RoundDetailsAndNavigation({
-
   roomData,
   roundList,
   currentRoundIndex,
