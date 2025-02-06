@@ -78,7 +78,7 @@ const RoomsPage: FC = () => {
   }
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 min-h-screen">
       <RoomTable rooms={rooms} showTabs={true} />
     </div>
   );

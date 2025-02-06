@@ -152,18 +152,13 @@ export function RoomTable({
         </Button>
       </div>
 
-      <div
-        className="overflow-hidden relative"
-        style={{ height: `${filteredRooms.length * 80 + 110 + 32}px` }}
-      >
+      <div className="overflow-hidden relative">
         {cardTransition((style, item) => (
           <AnimatedCard
             style={{
               ...style,
-              position: "absolute",
+              position: "relative", // Change from absolute to relative
               width: "100%",
-              top: 0,
-              left: 0,
             }}
             className="bg-secondary/20 px-4 pt-2 pb-4 rounded-[calc(var(--radius))]"
           >
