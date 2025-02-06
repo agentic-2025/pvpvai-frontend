@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import logo from "@/public/logo.svg";
-import { WalletDefault } from "@coinbase/onchainkit/wallet";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 export interface NavItem {
   href: string;
@@ -75,7 +75,7 @@ export function Navbar({ className, navItems }: NavbarProps) {
           ))}
         </div>
         <div className="ml-auto pr-4">
-          <WalletDefault />
+          <ConnectButton />
         </div>
       </div>
     </nav>
