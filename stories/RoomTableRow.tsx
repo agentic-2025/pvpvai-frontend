@@ -29,11 +29,11 @@ export function RoomTableRow({
   const roomType = roomTypeMapping[room.type_id];
   return (
     <TableRow style={style} className={className}>
-      <TableCell className="text-lg pl-6">{room.id}</TableCell>
-      <TableCell className="text-lg pl-6">
+      <TableCell className="text-base pl-6">{room.id}</TableCell>
+      <TableCell className="text-xl pl-6">
         <Link
           href={`/rooms/${room.id}`}
-          className="hover:underline font-medium"
+          className="hover:underline font-medium capitalize"
           style={{ color: room.color || "black" }}
         >
           {room.name}
@@ -56,7 +56,7 @@ export function RoomTableRow({
             <Image
               src={chainMetadata[room.chain_id]?.icon}
               alt={chainMetadata[room.chain_id]?.name}
-              className="size-4"
+              className="size-6"
               width={2000}
               height={2000}
             />
@@ -70,7 +70,7 @@ export function RoomTableRow({
             <Image
               src={(room.room_config as any)?.room_config?.buySellTokenImage}
               alt={(room.room_config as any)?.room_config?.buySellTokenSymbol}
-              className="size-4"
+              className="size-6"
               width={2000}
               height={2000}
             />

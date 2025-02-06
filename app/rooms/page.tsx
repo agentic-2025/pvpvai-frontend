@@ -22,6 +22,7 @@ const RoomsPage: FC = () => {
             type_id,
             image_url,
             color,
+            chain_id,
             rounds(
               id,
               created_at,
