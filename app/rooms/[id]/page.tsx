@@ -4,10 +4,14 @@ import Loader from "@/components/loader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
+  agentMessageAiChatOutputSchema,
   AllAiChatMessageSchemaTypes,
   AllOutputSchemaTypes,
+  gmMessageAiChatOutputSchema,
   heartbeatOutputMessageSchema,
+  observationMessageAiChatOutputSchema,
   publicChatMessageInputSchema,
+  pvpActionEnactedAiChatOutputSchema,
   subscribeRoomInputMessageSchema,
   WsMessageTypes,
 } from "@/lib/backend.types";
@@ -208,11 +212,9 @@ function isValidMessageType(
 ): messageType is WsMessageTypes {
   return Object.values(WsMessageTypes).includes(messageType as WsMessageTypes);
 }
-
 export default function RoomDetailPage() {
-  const params = useParams();
-  const id = params.id;
-  const roomId = parseInt(id);
+  const params = useParams<{ id: string }>();
+  const roomId = parseInt(params.id);
   const currentUserId = 1; //TODO Do not hardcode me
 
   // State for room details (common data)
@@ -319,26 +321,45 @@ export default function RoomDetailPage() {
         switch (data.messageType) {
           case WsMessageTypes.PUBLIC_CHAT:
             console.log("Public chat message received:", data);
+            const parsedData = publicChatMessageInputSchema.safeParse(data);
+            console.log("Parsed data public chat:", parsedData);
             setMessages((prev) => [...prev, data]);
             break;
 
           case WsMessageTypes.GM_MESSAGE:
             console.log("GM message received:", data);
+            const parsedGMData = gmMessageAiChatOutputSchema.safeParse(data);
+            console.log("Parsed data GM message:", parsedGMData);
             setAiChatMessages((prev) => [...prev, data]);
             break;
 
           case WsMessageTypes.PVP_ACTION_ENACTED:
             console.log("PVP action enacted message received:", data);
+            const parsedPVPData =
+              pvpActionEnactedAiChatOutputSchema.safeParse(data);
+            console.log(
+              "Parsed data PVP action enacted message:",
+              parsedPVPData
+            );
             setAiChatMessages((prev) => [...prev, data]);
             break;
 
           case WsMessageTypes.OBSERVATION:
             console.log("Observation message received:", data);
+            const parsedObservationData =
+              observationMessageAiChatOutputSchema.safeParse(data);
+            console.log(
+              "Parsed data observation message:",
+              parsedObservationData
+            );
             setAiChatMessages((prev) => [...prev, data]);
             break;
 
           case WsMessageTypes.AGENT_MESSAGE:
             console.log("Agent message received:", data);
+            const parsedAgentData =
+              agentMessageAiChatOutputSchema.safeParse(data);
+            console.log("Parsed data agent message:", parsedAgentData);
             setAiChatMessages((prev) => [...prev, data]);
             break;
 

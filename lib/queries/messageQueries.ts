@@ -27,6 +27,7 @@ const parseAgentMessage = (message: Json): AllAiChatMessageSchemaTypes => {
 
     switch (parsedMessage.messageType) {
       case WsMessageTypes.GM_MESSAGE:
+        console.log("GM message", parsedMessage);
         return gmMessageAiChatOutputSchema.parse(parsedMessage);
       case WsMessageTypes.AGENT_MESSAGE:
         return agentMessageAiChatOutputSchema.parse(parsedMessage);

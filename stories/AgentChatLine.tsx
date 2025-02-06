@@ -16,7 +16,7 @@ import React, { ReactNode } from "react";
 import { AgentBadge } from "./AgentBadge";
 
 interface AgentChatLineProps {
-  agentId: number;  
+  agentId: number;
   agentName: string;
   agentImageUrl?: string;
   agentBorderColor: string;

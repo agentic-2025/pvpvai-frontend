@@ -166,6 +166,9 @@ export function RoomTable({
               <TableHeader>
                 <TableRow className="border-b-[6px] border-gray-300 dark:border-gray-400">
                   <TableHead className="text-xl font-bold text-gray-700 dark:text-gray-200 pl-6 py-4 w-[400px]">
+                    Id
+                  </TableHead>
+                  <TableHead className="text-xl font-bold text-gray-700 dark:text-gray-200 pl-6 py-4 w-[400px]">
                     Name
                   </TableHead>
                   {!isBuySell && (

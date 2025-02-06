@@ -29,6 +29,7 @@ export function RoomTableRow({
   const roomType = roomTypeMapping[room.type_id];
   return (
     <TableRow style={style} className={className}>
+      <TableCell className="text-lg pl-6">{room.id}</TableCell>
       <TableCell className="text-lg pl-6">
         <Link
           href={`/rooms/${room.id}`}

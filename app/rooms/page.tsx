@@ -22,7 +22,7 @@ const RoomsPage: FC = () => {
             type_id,
             image_url,
             color,
-            rounds!inner(
+            rounds(
               id,
               created_at,
               round_agents!inner(
@@ -39,6 +39,7 @@ const RoomsPage: FC = () => {
           // .eq("rounds.active", true)
           // .order("rounds.created_at", { ascending: false })
           // .limit(1, { foreignTable: "rounds" })
+          
           .throwOnError();
 
         if (error) {
