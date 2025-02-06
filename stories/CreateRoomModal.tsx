@@ -842,7 +842,6 @@ export function CreateRoomModal({
         return true;
     }
   };
-  
 
   const getStepTitle = () => {
     const stepName = (() => {
