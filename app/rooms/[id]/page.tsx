@@ -475,7 +475,7 @@ export default function RoomDetailPage() {
           <div className="w-[35%] flex flex-col gap-6">
             <RoundDetailsAndNavigation
               roomData={roomData}
-              participants={participants}
+              // participants={participants}
               roundList={roundList}
               currentRoundIndex={currentRoundIndex}
               timeLeft={timeLeft}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -15,9 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ColorPicker } from "@/components/ui/color-picker";
-import supabase from "@/lib/config"; // Ensure this is set up correctly
-
-// Import shadcn select components
+import { readContract } from "viem/actions";
 import {
   Select,
   SelectContent,
@@ -25,9 +23,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-// Import the Database types
-import type { Database } from "@/types/DatabaseTypes";
+import { wagmiConfig, walletClient } from "@/components/wrapper/wrapper";
+import { coreAbi, coreAddress } from "@/constants/contact_abi/core-abi";
+import { useAccount } from "wagmi";
+import { Database } from "@/lib/database.types";
+import { formatEther } from "viem";
 
 // Helper function to generate a random hex color.
 const generateRandomColor = (includeHash = false) => {
@@ -37,8 +37,10 @@ const generateRandomColor = (includeHash = false) => {
   return includeHash ? `#${randomColor}` : randomColor;
 };
 
-// There are 6 steps (0 through 5).
-const totalSteps = 6;
+// Increase total steps to 7:
+// 0: Method Selection, 1: Basic Info, 2: Platform, 3: Model Settings,
+// 4: Character Card, 5: JSON Preview, 6: Confirmation.
+const totalSteps = 7;
 
 export default function CreateAgentModal() {
   const [step, setStep] = useState(0);
@@ -50,8 +52,6 @@ export default function CreateAgentModal() {
     platform: "",
     endpoint: "",
     ethWalletAddress: "",
-    // Note: These keys match your current UI. The POST logic still references additional
-    // keys such as display_name, sol_wallet_address, single_sentence_summary, etc.
     characterCard: {
       name: "",
       bio: "",
@@ -65,6 +65,10 @@ export default function CreateAgentModal() {
       modelProvider: "",
     },
   });
+  const { address: userAddress } = useAccount();
+
+  // New state to hold fees from the contract (assumed to be an array of BigInts)
+  const [fees, setFees] = useState<any>(null);
 
   // Helper function to update platform and prepopulate the endpoint
   const updatePlatform = (platform: string) => {
@@ -105,14 +109,15 @@ export default function CreateAgentModal() {
   const nextStep = () => setStep((prev) => Math.min(prev + 1, totalSteps - 1));
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 0));
 
-  // Header with a progress indicator.
+  // Update step titles for 7 steps.
   const getStepTitle = () => {
     const stepTitles = [
       "How do you want to create your agent?",
       "Basic Info – General",
-      "System",
+      "Platform",
       "Model Settings",
       "Character Card",
+      "Review JSON",
       "Confirmation",
     ];
     return (
@@ -134,7 +139,52 @@ export default function CreateAgentModal() {
     );
   };
 
+  // Fetch fees from the contract
+  const getFees = async () => {
+    try {
+      const result = await readContract(wagmiConfig, {
+        abi: coreAbi,
+        address: coreAddress,
+        functionName: "getFees",
+      });
+      return result;
+    } catch (error) {
+      console.error("Error fetching fees:", error);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    getFees()
+      .then((result) => {
+        setFees(result);
+      })
+      .catch((error) => console.error("Error in getFees useEffect:", error));
+  }, []);
+
+  // In the agent flow, first perform the deposit call, then send a backend request.
   const handleSubmit = async () => {
+    try {
+      if (fees && userAddress) {
+        const { request } = await wagmiConfig.simulateContract({
+          abi: coreAbi,
+          address: coreAddress,
+          functionName: "deposit",
+          value: fees[0], // Assuming fees[0] is the deposit amount as BigInt
+          account: userAddress,
+        });
+        const depositTx = await walletClient.writeContract(request);
+        console.log("Deposit successful:", depositTx);
+        // Optionally, you can capture the transaction hash:
+        // const depositTxHash = depositTx.transactionHash;
+      } else {
+        throw new Error("Fees or user address not available");
+      }
+    } catch (error) {
+      console.error("Error during deposit:", error);
+      return; // Exit if deposit fails.
+    }
+
     const payload: Database["public"]["Tables"]["agents"]["Insert"] = {
       display_name: agentData.characterCard.name,
       image_url: agentData.imageUrl,
@@ -150,22 +200,64 @@ export default function CreateAgentModal() {
       character_card: JSON.stringify(agentData.characterCard),
       earnings: 0,
       creator_id: 1,
+      // Optionally include deposit transaction hash if needed:
+      // deposit_transaction_hash: depositTxHash,
     };
 
-    const { data, error } = await supabase
-      .from("agents")
-      .insert([payload])
-      .select();
-
-    if (error) {
-      console.error("Error creating agent:", error);
-    } else {
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/agents`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Authorization-Signature": "mock_signature", // Replace with real signature if needed.
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+      if (!response.ok) throw new Error("Failed to create agent");
+      const data = await response.json();
       console.log("Agent created successfully:", data);
       setOpen(false);
       setStep(0);
-      window.location.reload();
+      // Optionally refresh the page:
+      // window.location.reload();
+    } catch (error) {
+      console.error("Error creating agent:", error);
     }
   };
+
+  // Function to render JSON preview (Review JSON step)
+  const renderJsonPreview = () => (
+    <div className="space-y-4">
+      <p className="text-gray-400">
+        Review your agent configuration before confirming the creation.
+      </p>
+      <div className="bg-muted p-4 rounded-md text-sm max-w-2xl max-h-96 overflow-auto text-white">
+        <pre className="whitespace-pre-wrap break-words">
+          {JSON.stringify(agentData, null, 2)}
+        </pre>
+      </div>
+    </div>
+  );
+
+  // Confirmation view (last step)
+  const renderConfirmation = () => (
+    <div className="flex flex-col gap-6">
+      <div className="p-4 text-foreground rounded-lg border-2 border-gray-400 flex flex-col gap-2 text-center">
+        <div className="text-muted-foreground">
+          Creating this agent will cost
+        </div>
+        <div className="text-foreground text-xl">
+          {fees ? formatEther(fees[1]) : "Loading..."} ETH
+        </div>
+        <div className="text-sm text-muted-foreground">
+          2% of all fees generated will go to you.
+        </div>
+      </div>
+    </div>
+  );
 
   const renderStepContent = () => {
     switch (step) {
@@ -204,7 +296,6 @@ export default function CreateAgentModal() {
       case 1:
         return (
           <div className="grid grid-cols-2 gap-4">
-            {/* Agent Name from characterCard */}
             <div className="space-y-2">
               <Label>Agent Name</Label>
               <Input
@@ -215,7 +306,6 @@ export default function CreateAgentModal() {
                 className="bg-muted"
               />
             </div>
-            {/* Image URL */}
             <div className="space-y-2">
               <Label>Image URL</Label>
               <Input
@@ -226,7 +316,6 @@ export default function CreateAgentModal() {
                 className="bg-muted"
               />
             </div>
-            {/* Description */}
             <div className="space-y-2">
               <Label>Description</Label>
               <Input
@@ -237,7 +326,6 @@ export default function CreateAgentModal() {
                 className="bg-muted"
               />
             </div>
-            {/* Eth Wallet Address */}
             <div className="space-y-2">
               <Label>Eth Wallet Address</Label>
               <Input
@@ -248,7 +336,6 @@ export default function CreateAgentModal() {
                 className="bg-muted"
               />
             </div>
-            {/* Agent Color */}
             <div>
               <ColorPicker
                 label="Agent Color"
@@ -406,18 +493,9 @@ export default function CreateAgentModal() {
           </div>
         );
       case 5:
-        return (
-          <div className="space-y-4">
-            <p className="text-gray-400">
-              Review your agent configuration before creating the agent.
-            </p>
-            <div className="bg-muted p-4 rounded-md text-sm max-w-2xl max-h-96 overflow-auto text-white">
-              <pre className="whitespace-pre-wrap break-words">
-                {JSON.stringify(agentData, null, 2)}
-              </pre>
-            </div>
-          </div>
-        );
+        return renderJsonPreview();
+      case 6:
+        return renderConfirmation();
       default:
         return null;
     }
