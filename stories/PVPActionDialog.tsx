@@ -12,10 +12,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { wagmiConfig, walletClient } from "@/components/wrapper/wrapper";
 import { roomAbi, roomAddress } from "@/constants/contact_abi/room-abi";
+import { parseEther } from "viem";
 import { useToast } from "@/hooks/use-toast";
-import Image from "next/image";
 import * as React from "react";
-import { useAccount, usePublicClient } from "wagmi";
+import { useAccount } from "wagmi";
 import { AgentAvatar } from "./AgentAvatar";
 import { PvPRuleCard } from "./PvPRuleCard";
 
@@ -36,12 +36,6 @@ function validatePvpInput(
   return { valid: true };
 }
 
-const toHex = (input: string) =>
-  "0x" +
-  Array.from(new TextEncoder().encode(input))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-
 interface PvpActionDialogProps {
   trigger: React.ReactNode;
   agentName: string;
@@ -49,35 +43,6 @@ interface PvpActionDialogProps {
   borderColor: string;
   agentAddress: string;
 }
-
-const ActionCard = ({
-  img,
-  text,
-  desc,
-  onClick,
-}: {
-  img: string;
-  text: string;
-  desc: string;
-  onClick?: () => void;
-}) => {
-  return (
-    <div
-      className="bg-secondary p-2 rounded-lg border flex flex-col items-center justify-center max-w-52 text-center cursor-pointer"
-      onClick={onClick}
-    >
-      <Image
-        src={img}
-        alt={text}
-        width={2000}
-        height={2000}
-        className="rounded-full size-10 invert"
-      />
-      <h6 className="text-base text-white">{text}</h6>
-      <p className="text-sm text-white/50">{desc}</p>
-    </div>
-  );
-};
 
 export function PvpActionDialog({
   trigger,
@@ -87,15 +52,13 @@ export function PvpActionDialog({
   agentAddress,
 }: PvpActionDialogProps) {
   const { address: userAddress } = useAccount();
-  const publicClient = usePublicClient();
 
   const [pvpVerb, setPvpVerb] = React.useState<string | null>(null);
   const [pvpInputText, setPvpInputText] = React.useState<string>("");
   const { toast } = useToast();
 
   const handleInvokePvpAction = async (verb: string, input: string) => {
-    const parametersHex = Buffer.from(input).toString("hex");
-
+    // const parametersHex = Buffer.from(input).toString("hex");
     try {
       const address = agentAddress as `0x${string}`;
       if (!userAddress) throw new Error("User not connected");
@@ -103,10 +66,11 @@ export function PvpActionDialog({
         abi: roomAbi,
         address: roomAddress,
         functionName: "invokePvpAction",
-        args: [address, verb, parametersHex],
+        args: [address, verb, input],
         account: userAddress,
+        value: parseEther("0.0002") as bigint,
       });
-      const tx = await walletClient.writeContract(request);
+      const tx = await  walletClient.writeContract(request);
       console.log(`PVP action "${verb}" invoked:`, tx);
 
       // Reset state after success.
