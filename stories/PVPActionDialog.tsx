@@ -11,13 +11,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { wagmiConfig, walletClient } from "@/components/wrapper/wrapper";
-import { roomAbi, roomAddress } from "@/constants/contact_abi/room-abi";
 import { parseEther } from "viem";
 import { useToast } from "@/hooks/use-toast";
 import * as React from "react";
 import { useAccount } from "wagmi";
 import { AgentAvatar } from "./AgentAvatar";
 import { PvPRuleCard } from "./PvPRuleCard";
+import { roomAbi } from "@/lib/contract.types";
 
 function validatePvpInput(
   verb: string,
@@ -64,7 +64,7 @@ export function PvpActionDialog({
       if (!userAddress) throw new Error("User not connected");
       const { request } = await wagmiConfig.simulateContract({
         abi: roomAbi,
-        address: roomAddress,
+        address: process.env.NEXT_PUBLIC_ROOM_ADDRESS as `0x${string}`,
         functionName: "invokePvpAction",
         args: [address, verb, input],
         account: userAddress,
