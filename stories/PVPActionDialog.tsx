@@ -1,25 +1,23 @@
 "use client";
 
-import * as React from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogTrigger,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
+  DialogTrigger,
 } from "@/components/ui/dialog";
-import { AgentAvatar } from "./AgentAvatar";
-import Image from "next/image";
-import knife from "./assets/pvp/knife.svg";
-import poison from "./assets/pvp/poison.svg";
-import deafen from "./assets/pvp/deafen.svg";
-import silence from "./assets/pvp/silence.svg";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAccount } from "wagmi";
 import { wagmiConfig, walletClient } from "@/components/wrapper/wrapper";
 import { roomAbi, roomAddress } from "@/constants/contact_abi/room-abi";
+import { useToast } from "@/hooks/use-toast";
+import Image from "next/image";
+import * as React from "react";
+import { useAccount, usePublicClient } from "wagmi";
+import { AgentAvatar } from "./AgentAvatar";
+import { PvPRuleCard } from "./PvPRuleCard";
 
 function validatePvpInput(
   verb: string,
@@ -49,7 +47,7 @@ interface PvpActionDialogProps {
   agentName: string;
   agentImageUrl?: string;
   borderColor: string;
-  agentAddress: string; 
+  agentAddress: string;
 }
 
 const ActionCard = ({
@@ -89,12 +87,15 @@ export function PvpActionDialog({
   agentAddress,
 }: PvpActionDialogProps) {
   const { address: userAddress } = useAccount();
+  const publicClient = usePublicClient();
 
   const [pvpVerb, setPvpVerb] = React.useState<string | null>(null);
   const [pvpInputText, setPvpInputText] = React.useState<string>("");
+  const { toast } = useToast();
 
   const handleInvokePvpAction = async (verb: string, input: string) => {
-    const parametersHex = Buffer.from(input).toString('hex');
+    const parametersHex = Buffer.from(input).toString("hex");
+
     try {
       const address = agentAddress as `0x${string}`;
       if (!userAddress) throw new Error("User not connected");
@@ -107,11 +108,17 @@ export function PvpActionDialog({
       });
       const tx = await walletClient.writeContract(request);
       console.log(`PVP action "${verb}" invoked:`, tx);
+
       // Reset state after success.
       setPvpVerb(null);
       setPvpInputText("");
     } catch (error) {
       console.error("Error invoking PvP action:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Error invoking PvP action: ${error}`,
+      });
     }
   };
 
@@ -122,6 +129,20 @@ export function PvpActionDialog({
       handleInvokePvpAction(verb, "");
     }
   };
+
+  // const useEffect(() => {
+  //   const fetchPvpStatuses = async () => {
+  //     if (!publicClient) return;
+  //     const statuses = await publicClient.readContract({
+  //       abi: roomAbi,
+  //       address: roomAddress,
+  //       functionName: "getPvpStatuses",
+  //       args: [agentAddress],
+  //     });
+  //     setCurrentPvpStatuses(statuses);
+  //   };
+  //   fetchPvpStatuses();
+  // }, []);
 
   return (
     <Dialog>
@@ -135,28 +156,22 @@ export function PvpActionDialog({
             <div className="flex flex-col items-center justify-center gap-y-4 py-6">
               <div className="w-full flex items-center justify-between">
                 {/* Attack */}
-                <div
-                  className="space-y-2 text-center"
-                  onClick={() => handleActionClick("attack")}
-                >
+                <div className="space-y-2 text-center">
                   <p>{0.001} ETH</p>
-                  <ActionCard
-                    img={knife}
-                    text="Attack"
-                    desc="Send a direct message to an agent"
+                  <PvPRuleCard
+                    variant="ATTACK"
+                    selected={pvpVerb === "attack"}
+                    onClick={() => handleActionClick("attack")}
                   />
                 </div>
 
                 {/* Silence */}
-                <div
-                  className="space-y-2 text-center"
-                  onClick={() => handleActionClick("silence")}
-                >
+                <div className="space-y-2 text-center">
                   <p>{0.001} ETH</p>
-                  <ActionCard
-                    img={silence}
-                    text="Silence"
-                    desc="Prevent an agent from sending messages"
+                  <PvPRuleCard
+                    variant="SILENCE"
+                    selected={pvpVerb === "silence"}
+                    onClick={() => handleActionClick("silence")}
                   />
                 </div>
               </div>
@@ -172,28 +187,22 @@ export function PvpActionDialog({
 
               <div className="w-full flex items-center justify-between">
                 {/* Deafen */}
-                <div
-                  className="space-y-2 text-center"
-                  onClick={() => handleActionClick("deafen")}
-                >
+                <div className="space-y-2 text-center">
                   <p>{0.001} ETH</p>
-                  <ActionCard
-                    img={deafen}
-                    text="Deafen"
-                    desc="Prevent an agent from receiving messages"
+                  <PvPRuleCard
+                    variant="DEAFEN"
+                    selected={pvpVerb === "deafen"}
+                    onClick={() => handleActionClick("deafen")}
                   />
                 </div>
 
                 {/* Poison */}
-                <div
-                  className="space-y-2 text-center"
-                  onClick={() => handleActionClick("poison")}
-                >
+                <div className="space-y-2 text-center">
                   <p>{0.001} ETH</p>
-                  <ActionCard
-                    img={poison}
-                    text="Poison"
-                    desc="Replace a word in messages sent and received by the agent"
+                  <PvPRuleCard
+                    variant="POISON"
+                    selected={pvpVerb === "poison"}
+                    onClick={() => handleActionClick("poison")}
                   />
                 </div>
               </div>
