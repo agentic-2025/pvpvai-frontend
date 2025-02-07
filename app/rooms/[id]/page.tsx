@@ -451,6 +451,7 @@ export default function RoomDetailPage() {
                         bullAmount={40}
                         variant="full"
                         betAmount={0}
+                        address={agent.agentData.eth_wallet_address || ""}
                       />
                     ))
                   ) : (

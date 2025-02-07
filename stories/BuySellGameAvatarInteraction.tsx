@@ -18,6 +18,7 @@ interface BuySellGameAvatarInteractionProps {
   bullAmount: number;
   variant?: "slim" | "full";
   showName?: boolean;
+  address: string;
 }
 
 export const BuySellGameAvatarInteraction: FC<
@@ -33,6 +34,7 @@ export const BuySellGameAvatarInteraction: FC<
   bullAmount,
   variant = "full",
   showName = true,
+  address
 }) => {
   const total = bearAmount + bullAmount;
   const bearPercentage = total > 0 ? (bearAmount / total) * 100 : 0;
@@ -49,6 +51,7 @@ export const BuySellGameAvatarInteraction: FC<
           betType={betType}
           bearAmount={bearAmount}
           bullAmount={bullAmount}
+          agentAddress={address}
         />
         {showName && (
           <Link

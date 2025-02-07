@@ -17,11 +17,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAccount } from "wagmi";
-
-// Import your room contract details (adjust the import path as needed)
 import { roomAbi, roomAddress } from "@/constants/contact_abi/room-abi";
-// Import wagmi and wallet client configuration
 import { wagmiConfig, walletClient } from "@/components/wrapper/wrapper";
+import { PvpActionDialog } from "./PVPActionDialog";
 
 interface AgentAvatarInteractionProps {
   name: string;
@@ -31,6 +29,7 @@ interface AgentAvatarInteractionProps {
   betType?: "Buy" | "Sell"; // initial bet type if any
   bearAmount: number; // percentage for Sell side
   bullAmount: number; // percentage for Buy side
+  agentAddress: string;
 }
 
 export function AgentAvatarInteraction({
@@ -41,6 +40,7 @@ export function AgentAvatarInteraction({
   betType,
   bearAmount,
   bullAmount,
+  agentAddress,
 }: AgentAvatarInteractionProps) {
   // Local state for selected bet type and the bet amount (as a string)
   const [selectedBetType, setSelectedBetType] = useState<"Buy" | "Sell" | null>(
@@ -100,116 +100,127 @@ export function AgentAvatarInteraction({
             selectedBetType ? "opacity-70" : ""
           )}
         />
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+          <div className="flex gap-8">
+            {/* Place Bet Dialog Trigger */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <button className="px-4 py-1 text-gray-200 text-xs font-semibold rounded-full transform -translate-x-8 hover:-translate-x-6 transition-transform">
+                  {selectedBetType ? "CHANGE BET" : "PLACE BET"}
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>
+                    {selectedBetType === "Sell"
+                      ? "Modify or Cancel Sell Bet"
+                      : selectedBetType === "Buy"
+                      ? "Modify or Cancel Buy Bet"
+                      : "Place a Bet"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    <div className="flex flex-col items-center pt-6 gap-y-4">
+                      <div className="flex items-center justify-between w-full h-60">
+                        {/* Sell Side */}
+                        <div className="space-y-2 text-center">
+                          <Image
+                            src={bearIcon}
+                            alt="Sell"
+                            width={64}
+                            height={64}
+                            className="w-16 h-16"
+                          />
+                          <h5 className="text-red-600 text-3xl font-bold">
+                            {bearAmount}%
+                          </h5>
+                          <button
+                            onClick={() => setSelectedBetType("Sell")}
+                            className={cn(
+                              "px-6 h-8 text-lg font-medium rounded",
+                              selectedBetType === "Sell"
+                                ? "bg-red-600 text-white"
+                                : "border border-red-500 text-red-600"
+                            )}
+                          >
+                            SELL
+                          </button>
+                        </div>
 
-        <DialogTrigger asChild>
-          <div
-            className={cn(
-              "absolute inset-0 bg-white/85 rounded-full opacity-0 group-hover:opacity-100 transition-opacity",
-              "flex flex-col items-center justify-center gap-0.5",
-              "text-gray-500 text-sm font-semibold cursor-pointer"
-            )}
-          >
-            <span>{selectedBetType ? "CHANGE" : "PLACE"}</span>
-            <span>BET</span>
+                        {/* Avatar in the middle */}
+                        <AgentAvatar
+                          name={name}
+                          borderColor={borderColor}
+                          imageUrl={imageUrl}
+                          variant="lg"
+                          className="mx-4"
+                        />
+
+                        {/* Buy Side */}
+                        <div className="space-y-2 text-center">
+                          <Image
+                            src={bullIcon}
+                            alt="Buy"
+                            width={64}
+                            height={64}
+                            className="w-16 h-16"
+                          />
+                          <h5 className="text-primary text-3xl font-bold">
+                            {bullAmount}%
+                          </h5>
+                          <button
+                            onClick={() => setSelectedBetType("Buy")}
+                            className={cn(
+                              "px-6 h-8 text-lg font-medium rounded",
+                              selectedBetType === "Buy"
+                                ? "bg-primary text-white"
+                                : "border border-primary text-primary"
+                            )}
+                          >
+                            BUY
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Bet Amount Input */}
+                      <div className="flex items-center justify-center gap-x-4 w-full">
+                        <Input
+                          type="number"
+                          value={localBetAmount}
+                          onChange={handleBetAmountChange}
+                          placeholder="Enter bet amount"
+                          className="w-1/2 mb-2"
+                        />
+                        <span className="text-lg font-medium">SOL</span>
+                      </div>
+                    </div>
+                  </DialogDescription>
+                </DialogHeader>
+
+                {/* Bottom Dynamic Button Text triggers the deposit call */}
+                <Button
+                  onClick={handlePlaceBet}
+                  className="mt-4 text-center bg-secondary-foreground/40 hover:bg-secondary-foreground/20 min-w-24 h-10 w-fit text-white text-lg font-medium mx-auto"
+                >
+                  Bet ${localBetAmount} SOL on ${selectedBetType}
+                </Button>
+              </DialogContent>{" "}
+            </Dialog>
+
+            {/* Take Action Dialog Trigger */}
+            <PvpActionDialog
+              agentName={name}
+              agentImageUrl={imageUrl}
+              borderColor={borderColor}
+              agentAddress={agentAddress}
+              trigger={
+                <button className="px-4 py-1  text-gray-200 text-xs font-semibold rounded-full transform translate-x-8 hover:translate-x-6 transition-transform">
+                  TAKE ACTION
+                </button>
+              }
+            />
           </div>
-        </DialogTrigger>
+        </div>
       </div>
-
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {selectedBetType === "Sell"
-              ? "Modify or Cancel Sell Bet"
-              : selectedBetType === "Buy"
-              ? "Modify or Cancel Buy Bet"
-              : "Place a Bet"}
-          </DialogTitle>
-          <DialogDescription>
-            <div className="flex flex-col items-center pt-6 gap-y-4">
-              <div className="flex items-center justify-between w-full h-60">
-                {/* Sell Side */}
-                <div className="space-y-2 text-center">
-                  <Image
-                    src={bearIcon}
-                    alt="Sell"
-                    width={64}
-                    height={64}
-                    className="w-16 h-16"
-                  />
-                  <h5 className="text-red-600 text-3xl font-bold">
-                    {bearAmount}%
-                  </h5>
-                  <button
-                    onClick={() => setSelectedBetType("Sell")}
-                    className={cn(
-                      "px-6 h-8 text-lg font-medium rounded",
-                      selectedBetType === "Sell"
-                        ? "bg-red-600 text-white"
-                        : "border border-red-500 text-red-600"
-                    )}
-                  >
-                    SELL
-                  </button>
-                </div>
-
-                {/* Avatar in the middle */}
-                <AgentAvatar
-                  name={name}
-                  borderColor={borderColor}
-                  imageUrl={imageUrl}
-                  variant="lg"
-                  className="mx-4"
-                />
-
-                {/* Buy Side */}
-                <div className="space-y-2 text-center">
-                  <Image
-                    src={bullIcon}
-                    alt="Buy"
-                    width={64}
-                    height={64}
-                    className="w-16 h-16"
-                  />
-                  <h5 className="text-primary text-3xl font-bold">
-                    {bullAmount}%
-                  </h5>
-                  <button
-                    onClick={() => setSelectedBetType("Buy")}
-                    className={cn(
-                      "px-6 h-8 text-lg font-medium rounded",
-                      selectedBetType === "Buy"
-                        ? "bg-primary text-white"
-                        : "border border-primary text-primary"
-                    )}
-                  >
-                    BUY
-                  </button>
-                </div>
-              </div>
-
-              {/* Bet Amount Input */}
-              <div className="flex items-center justify-center gap-x-4 w-full">
-                <Input
-                  type="number"
-                  value={localBetAmount}
-                  onChange={handleBetAmountChange}
-                  placeholder="Enter bet amount"
-                  className="w-1/2 mb-2"
-                />
-                <span className="text-lg font-medium">SOL</span>
-              </div>
-            </div>
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Bottom Dynamic Button Text triggers the deposit call */}
-        <Button
-          onClick={handlePlaceBet}
-          className="mt-4 text-center bg-secondary-foreground/40 hover:bg-secondary-foreground/20 min-w-24 h-10 w-fit text-white text-lg font-medium mx-auto"
-        >
-          Bet ${localBetAmount} SOL on ${selectedBetType}
-        </Button>
-      </DialogContent>
     </Dialog>
   );
 }
