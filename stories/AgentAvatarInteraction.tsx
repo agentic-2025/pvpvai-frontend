@@ -16,10 +16,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAccount } from "wagmi";
-import { roomAbi, roomAddress } from "@/constants/contact_abi/room-abi";
+import { useAccount, useChainId, useConfig, usePublicClient, useSwitchChain } from "wagmi";
 import { wagmiConfig, walletClient } from "@/components/wrapper/wrapper";
 import { PvpActionDialog } from "./PVPActionDialog";
+import { roomAbi } from "@/lib/contract.types";
+import { parseEther } from "viem";
 
 interface AgentAvatarInteractionProps {
   name: string;
@@ -71,12 +72,18 @@ export function AgentAvatarInteraction({
 
     try {
       const betTypeValue = selectedBetType === "Buy" ? 1 : 3;
+      console.log("placing bet", agentAddress, betTypeValue, betAmountNumber);
       const { request } = await wagmiConfig.simulateContract({
         abi: roomAbi,
-        address: roomAddress,
+        address: process.env.NEXT_PUBLIC_ROOM_ADDRESS as `0x${string}`,
         functionName: "placeBet",
-        args: [userAddress, betTypeValue, BigInt(betAmountNumber)],
+        args: [
+          agentAddress,
+          betTypeValue,
+          parseEther(betAmountNumber.toString()),
+        ],
         account: userAddress,
+        value: parseEther(betAmountNumber.toString()),
       });
 
       const depositTx = await walletClient.writeContract(request);

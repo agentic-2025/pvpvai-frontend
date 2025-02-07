@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { wagmiConfig, walletClient } from "@/components/wrapper/wrapper";
-import { coreAbi, coreAddress } from "@/constants/contact_abi/core-abi";
+import { coreAbi } from "@/lib/contract.types";
 import { useAccount } from "wagmi";
 import { Database } from "@/lib/database.types";
 import { formatEther } from "viem";
@@ -144,7 +144,7 @@ export default function CreateAgentModal() {
     try {
       const result = await readContract(wagmiConfig, {
         abi: coreAbi,
-        address: coreAddress,
+        address: process.env.NEXT_PUBLIC_CORE_ADDRESS as `0x${string}`,
         functionName: "getFees",
       });
       return result;
@@ -168,7 +168,7 @@ export default function CreateAgentModal() {
       if (fees && userAddress) {
         const { request } = await wagmiConfig.simulateContract({
           abi: coreAbi,
-          address: coreAddress,
+          address: process.env.NEXT_PUBLIC_CORE_ADDRESS as `0x${string}`,
           functionName: "deposit",
           value: fees[0], // Assuming fees[0] is the deposit amount as BigInt
           account: userAddress,

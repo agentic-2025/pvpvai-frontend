@@ -61,6 +61,7 @@ type RoundAgentLookup = {
   [agentId: number]: {
     roundAgentData: Tables<"round_agents">;
     agentData: Tables<"agents">;
+    walletAddress: string;
   };
 };
 
@@ -73,7 +74,8 @@ const useRoundAgents = (roundId: number) => {
         .select(
           `
           *,
-          agents (*)
+          agents(*),
+          rounds(rooms(room_agents(agent_id, wallet_address)))
         `
         )
         .eq("round_id", roundId);
@@ -81,13 +83,23 @@ const useRoundAgents = (roundId: number) => {
         console.error("Error fetching round agents", error);
         throw error;
       }
+      console.log(data, "data");
 
       // Transform array into lookup object
       return data?.reduce<RoundAgentLookup>((acc, roundAgent) => {
-        if (roundAgent.agent_id && roundAgent.agents) {
+        if (roundAgent.agent_id && roundAgent.rounds.rooms.room_agents) {
+          let walletAddress = roundAgent.rounds.rooms.room_agents.find(
+            (roomAgent) => roomAgent.agent_id === roundAgent.agent_id
+          )?.wallet_address;
+
+          if (!walletAddress) {
+            throw "Wallet address not found for agent"
+          }
+
           acc[roundAgent.agent_id] = {
             roundAgentData: roundAgent,
             agentData: roundAgent.agents,
+            walletAddress: walletAddress,
           };
         }
         return acc;
@@ -451,7 +463,7 @@ export default function RoomDetailPage() {
                         bullAmount={40}
                         variant="full"
                         betAmount={0}
-                        address={agent.agentData.eth_wallet_address || ""}
+                        address={agent.walletAddress}
                       />
                     ))
                   ) : (

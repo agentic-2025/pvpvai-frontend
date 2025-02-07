@@ -28,7 +28,7 @@ import { ChainButton } from "./ChainButton";
 import { PvPRuleCard } from "./PvPRuleCard";
 import { SupportedChains } from "@/lib/consts";
 import { readContract } from "viem/actions";
-import { coreAbi, coreAddress } from "@/constants/contact_abi/core-abi";
+import { coreAbi } from "@/lib/contract.types";
 import { wagmiConfig, walletClient } from "@/components/wrapper/wrapper";
 import { formatEther } from "viem";
 import { useAccount } from "wagmi";
@@ -183,7 +183,7 @@ export function CreateRoomModal({
     try {
       const result = await readContract(wagmiConfig, {
         abi: coreAbi,
-        address: coreAddress,
+        address: process.env.NEXT_PUBLIC_CORE_ADDRESS as `0x${string}`,
         functionName: "getFees",
       });
       return result;
