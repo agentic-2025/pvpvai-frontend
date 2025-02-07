@@ -47,6 +47,8 @@ export const BuySellGameAvatarInteraction: FC<
           imageUrl={imageUrl}
           betAmount={betAmount}
           betType={betType}
+          bearAmount={bearAmount}
+          bullAmount={bullAmount}
         />
         {showName && (
           <Link
