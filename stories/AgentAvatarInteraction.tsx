@@ -22,6 +22,7 @@ import { AgentAvatar } from "./AgentAvatar";
 import { PvpActionDialog } from "./PVPActionDialog";
 import { Tabs, TabsList, TabsTrigger } from "@radix-ui/react-tabs";
 import AnimatedBackground from "@/components/ui/animated-tabs";
+import { Tables } from "@/lib/database.types";
 
 interface AgentAvatarInteractionProps {
   name: string;
@@ -32,6 +33,7 @@ interface AgentAvatarInteractionProps {
   bearAmount: number; // percentage for Sell side
   bullAmount: number; // percentage for Buy side
   agentAddress: string;
+  roomData: Tables<"rooms">;
 }
 
 const betTypeMap = {
@@ -49,6 +51,7 @@ export function AgentAvatarInteraction({
   bearAmount,
   bullAmount,
   agentAddress,
+  roomData
 }: AgentAvatarInteractionProps) {
   const publicClient = usePublicClient();
   const { writeContract } = useWriteContract();
@@ -97,7 +100,7 @@ export function AgentAvatarInteraction({
       const { request } = await publicClient.simulateContract({
         abi: roomAbi,
 
-        address: getAddress(process.env.NEXT_PUBLIC_ROOM_ADDRESS || ""), // TODO this needs to be coming down from props, it's in the rooms table.
+        address: getAddress(roomData.contract_address || ""), // TODO this needs to be coming down from props, it's in the rooms table.
         functionName: "placeBet",
         args: [
           getAddress(agentAddress),

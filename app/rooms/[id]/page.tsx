@@ -280,9 +280,11 @@ function AgentsSkeleton() {
 function AgentsDisplay({
   roundAgents,
   isLoadingAgents,
+  roomData,
 }: {
   roundAgents: RoundAgentLookup | undefined;
   isLoadingAgents: boolean;
+  roomData: Tables<"rooms">;
 }) {
   return (
     <div className="w-full h-[60%] overflow-y-auto bg-[#1c1917] rounded-lg p-3">
@@ -295,6 +297,7 @@ function AgentsDisplay({
               Object.values(roundAgents).map((agent) => (
                 <BuySellGameAvatarInteraction
                   key={agent.agentData.id}
+                  roomData={roomData}
                   id={agent.agentData.id}
                   name={agent.agentData.display_name}
                   imageUrl={agent.agentData.image_url || ""}
@@ -546,6 +549,7 @@ export default function RoomDetailPage() {
             <AgentsDisplay
               roundAgents={roundAgents}
               isLoadingAgents={isLoadingAgents}
+              roomData={roomData}
             />
             {/* Agent Chat: shows only agent messages */}
             <div className="flex-1 bg-card rounded-lg overflow-hidden w-full">
