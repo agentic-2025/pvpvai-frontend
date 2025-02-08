@@ -250,6 +250,7 @@ export function AgentAvatarInteraction({
               agentImageUrl={imageUrl}
               borderColor={borderColor}
               agentAddress={agentAddress}
+              roomData={roomData}
               trigger={
                 <button className="z-20 px-4 py-1  text-gray-200 text-xs font-semibold rounded-full transform translate-x-8 hover:translate-x-6 transition-transform">
                   TAKE ACTION

@@ -1,4 +1,11 @@
-import React, { useState } from "react";
+import React from "react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 
 interface BullBearHoldRatioBarProps {
   buy: number;
@@ -11,60 +18,75 @@ export const BullBearHoldRatioBar: React.FC<BullBearHoldRatioBarProps> = ({
   sell,
   hold,
 }) => {
-  // 0n?
-  buy = Number(buy);
-  sell = Number(sell);
-  hold = Number(hold);
-  const total = buy + sell + hold;
-  const buyPercentage = total > 0 ? (buy / total) * 100 : 0;
-  const sellPercentage = total > 0 ? (sell / total) * 100 : 0;
-  const holdPercentage = total > 0 ? (hold / total) * 100 : 0;
+  const total = BigInt(buy) + BigInt(sell) + BigInt(hold);
+  const buyPercentage = total > 0 ? Number((Number(BigInt(buy)) / Number(total)) * 100) : 0;
+  const sellPercentage = total > 0 ? Number((Number(BigInt(sell)) / Number(total)) * 100) : 0;
+  const holdPercentage = total > 0 ? Number((Number(BigInt(hold)) / Number(total)) * 100) : 0;
 
-  const [hovered, setHovered] = useState<"buy" | "sell" | "hold" | null>(null);
+  const betDetails = [
+    { label: "Buy", amount: buy, percentage: buyPercentage, color: "#16a34a" },
+    {
+      label: "Hold",
+      amount: hold,
+      percentage: holdPercentage,
+      color: "#9ca3af",
+    },
+    {
+      label: "Sell",
+      amount: sell,
+      percentage: sellPercentage,
+      color: "#dc2626",
+    },
+  ];
 
   return (
-    <div className="relative w-full h-6 flex rounded-full overflow-hidden border border-gray-700">
-      {/* Buy Section */}
-      <div
-        className="h-full bg-green-500 transition-all relative"
-        style={{ width: `${buyPercentage}%` }}
-        onMouseEnter={() => setHovered("buy")}
-        onMouseLeave={() => setHovered(null)}
-      >
-        {hovered === "buy" && (
-          <div className="absolute top-[-40px] left-1/2 -translate-x-1/2 bg-green-700 text-white text-xs px-2 py-1 rounded-md shadow-lg">
-            Buy: {buy} ({buyPercentage.toFixed(1)}%)
-          </div>
-        )}
-      </div>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="relative w-full h-4 flex rounded-full overflow-hidden border border-gray-700 cursor-pointer">
+            {/* Buy Section */}
+            <div
+              className="h-full bg-green-500 transition-all"
+              style={{ width: `${buyPercentage}%` }}
+            />
 
-      {/* Hold Section */}
-      <div
-        className="h-full bg-gray-500 transition-all relative"
-        style={{ width: `${holdPercentage}%` }}
-        onMouseEnter={() => setHovered("hold")}
-        onMouseLeave={() => setHovered(null)}
-      >
-        {hovered === "hold" && (
-          <div className="absolute top-[-40px] left-1/2 -translate-x-1/2 bg-gray-700 text-white text-xs px-2 py-1 rounded-md shadow-lg">
-            Hold: {hold} ({holdPercentage.toFixed(1)}%)
-          </div>
-        )}
-      </div>
+            {/* Hold Section */}
+            <div
+              className="h-full bg-gray-500 transition-all"
+              style={{ width: `${holdPercentage}%` }}
+            />
 
-      {/* Sell Section */}
-      <div
-        className="h-full bg-red-500 transition-all relative"
-        style={{ width: `${sellPercentage}%` }}
-        onMouseEnter={() => setHovered("sell")}
-        onMouseLeave={() => setHovered(null)}
-      >
-        {hovered === "sell" && (
-          <div className="absolute top-[-40px] left-1/2 -translate-x-1/2 bg-red-700 text-white text-xs px-2 py-1 rounded-md shadow-lg">
-            Sell: {sell} ({sellPercentage.toFixed(1)}%)
+            {/* Sell Section */}
+            <div
+              className="h-full bg-red-500 transition-all"
+              style={{ width: `${sellPercentage}%` }}
+            />
           </div>
-        )}
-      </div>
-    </div>
+        </TooltipTrigger>
+
+        <TooltipContent side="bottom" className="bg-gray-800 border-gray-700">
+          <p className="font-bold text-white text-center mb-2">Bet Details</p>
+          {betDetails.map(
+            (item, index) =>
+              item.amount > 0 && (
+                <div key={index} className="flex items-center gap-2 truncate">
+                  <Badge
+                    className="truncate max-w-[120px]"
+                    style={{
+                      backgroundColor: item.color,
+                      color: "white",
+                    }}
+                  >
+                    {item.label}
+                  </Badge>
+                  <span className="text-gray-200 whitespace-nowrap">
+                    {item.percentage.toFixed(1)}% 
+                  </span>
+                </div>
+              )
+          )}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };

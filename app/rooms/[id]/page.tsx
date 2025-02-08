@@ -361,9 +361,12 @@ function AgentsDisplay({
     };
 
     fetchAgentPositions();
-  }, [roundAgents, roundIdFromContract]); // Re-fetch if agents or round changes
 
-  console.log("yo0000000000000000000000",agentPositions);
+    const interval = setInterval(fetchAgentPositions, 4000);
+
+    return () => clearInterval(interval);
+  }, [roundAgents, roundIdFromContract, roomData]);
+
   return (
     <div className="w-full h-[60%] bg-[#1c1917] rounded-lg p-3">
       <div className="bg-[#262626] flex items-center justify-center w-full h-full rounded-md">
@@ -609,13 +612,17 @@ export default function RoomDetailPage() {
   // we use a two‑tier approach:
   // 1. A 1‑second interval that decrements the local timer.
   // 2. A 5‑second interval that re‑fetches the round end time from the blockchain.
-  const [roundIdFromContract, setRoundIdFromContract] = useState<number | null>(null);
+  const [roundIdFromContract, setRoundIdFromContract] = useState<number | null>(
+    null
+  );
 
   useEffect(() => {
     if (!roomData) return;
 
     const fetchRoundIdFromContract = async () => {
-      const roundIdFromContract = await fetchCurrentRoundId(roomData.contract_address || "");
+      const roundIdFromContract = await fetchCurrentRoundId(
+        roomData.contract_address || ""
+      );
 
       console.log("roundIdFromContract", roundIdFromContract);
       setRoundIdFromContract(roundIdFromContract);
@@ -624,10 +631,12 @@ export default function RoomDetailPage() {
   }, [currentRoundId]);
 
   useEffect(() => {
-
     const updateTimer = async () => {
       if (!roomData || !roundIdFromContract) return;
-      const roundEndTimeFetched = await getRoundEndTime(roomData.contract_address || "", roundIdFromContract);
+      const roundEndTimeFetched = await getRoundEndTime(
+        roomData.contract_address || "",
+        roundIdFromContract
+      );
       if (!roundEndTimeFetched) return;
       const currentTimestamp = await fetchCurrentBlockTimestamp();
       if (!currentTimestamp) return;

@@ -31,7 +31,9 @@ import { Tables } from "@/lib/database.types";
 
 function validatePvpInput(
   verb: string,
-  input: string
+  input: string,
+  poisonFind?: string,
+  poisonReplace?: string
 ): { valid: boolean; message?: string } {
   if (verb.toLowerCase() === "attack") {
     const words = input.trim().split(/\s+/).filter(Boolean);
@@ -42,7 +44,7 @@ function validatePvpInput(
     if (!poisonFind || !poisonReplace) {
       return {
         valid: false,
-        message: "Both find and replace fields are required.",
+        message: "Both 'Find' and 'Replace' fields are required.",
       };
     }
   }
@@ -78,7 +80,7 @@ export function PvpActionDialog({
   agentImageUrl,
   borderColor,
   agentAddress,
-  roomData
+  roomData,
 }: PvpActionDialogProps) {
   const { address: userAddress } = useAccount();
   const { writeContract } = useWriteContract();
@@ -220,6 +222,10 @@ export function PvpActionDialog({
     (status) => status.verb === "deafen" && status.endTime > nowSeconds
   );
 
+  const activeEffects = pvpStatuses.filter(
+    (status) => status.endTime > nowSeconds
+  );
+
   // refresh each second
   React.useEffect(() => {
     const interval = setInterval(() => {
@@ -234,7 +240,8 @@ export function PvpActionDialog({
       <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle className="text-center">
-            Launch a PvP Action Against Agent
+            Launch a PvP Action Against{" "}
+            <span className="text-primary">{agentName}</span>
           </DialogTitle>
           <DialogDescription asChild>
             <div className="flex flex-col items-center justify-center gap-y-4 py-6">
@@ -266,13 +273,33 @@ export function PvpActionDialog({
                 </div>
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <AgentAvatar
                   name={agentName}
                   borderColor={borderColor}
                   imageUrl={agentImageUrl}
                   variant="lg"
                 />
+                {activeEffects.length > 0 && (
+                  <div className="text-white p-3 rounded-lg w-full max-w-md">
+                    <h3 className="text-md font-bold text-center">
+                      Active Effects
+                    </h3>
+                    <ul className="mt-2 space-y-2">
+                      {activeEffects.map((effect, index) => (
+                        <li
+                          key={index}
+                          className="flex justify-between items-center bg-gray-700 px-3 py-1 rounded-md"
+                        >
+                          <span className="capitalize">{effect.verb}</span>
+                          <span className="text-sm">
+                            {displayTimer(effect.endTime)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
 
               <div className="w-full flex items-center justify-between">
@@ -386,19 +413,37 @@ export function PvpActionDialog({
                     {(() => {
                       const { valid, message } = validatePvpInput(
                         pvpVerb,
-                        attackInputText
+                        attackInputText,
+                        poisonFind,
+                        poisonReplace
                       );
                       return !valid ? (
                         <p className="text-red-500 text-sm">{message}</p>
                       ) : null;
                     })()}
+
                     <Button
-                      onClick={() =>
-                        handleInvokePvpAction(pvpVerb, attackInputText)
-                      }
+                      onClick={() => {
+                        if (pvpVerb.toLowerCase() === "attack") {
+                          handleInvokePvpAction(pvpVerb, attackInputText);
+                        } else if (pvpVerb.toLowerCase() === "poison") {
+                          handleInvokePvpAction(
+                            pvpVerb,
+                            JSON.stringify({
+                              find: poisonFind,
+                              replace: poisonReplace,
+                            })
+                          );
+                        }
+                      }}
                       className="w-fit"
                       disabled={
-                        !validatePvpInput(pvpVerb, attackInputText).valid
+                        !validatePvpInput(
+                          pvpVerb,
+                          attackInputText,
+                          poisonFind,
+                          poisonReplace
+                        ).valid
                       }
                     >
                       Confirm {pvpVerb}
