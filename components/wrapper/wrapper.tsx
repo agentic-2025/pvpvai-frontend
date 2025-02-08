@@ -7,20 +7,21 @@ import { getDefaultConfig, RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import "@rainbow-me/rainbowkit/styles.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { createPublicClient, createWalletClient, custom } from "viem";
 import { baseSepolia } from "viem/chains";
-import { WagmiProvider } from "wagmi";
+import { http, WagmiProvider } from "wagmi";
 
-// const wagmiConfig = createPublicClient({
-//   chain: baseSepolia,
-//   transport: http(
-//     `https://base-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`
-//   ),
-// });
+export const wagmiConfig = createPublicClient({
+  chain: baseSepolia,
+  transport: http(
+    `https://base-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`
+  ),
+});
 
-// const walletClient = createWalletClient({
-//   chain: baseSepolia,
-//   transport: custom(window.ethereum),
-// });
+export const walletClient = createWalletClient({
+  chain: baseSepolia,
+  transport: custom(window.ethereum),
+});
 
 export const config = getDefaultConfig({
   appName: "PvPvAI",

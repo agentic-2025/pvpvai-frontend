@@ -101,7 +101,7 @@ const useRoundAgents = (roundId: number) => {
           )?.wallet_address;
 
           if (!walletAddress) {
-            throw "Wallet address not found for agent";;
+            throw "Wallet address not found for agent";
           }
 
           acc[roundAgent.agent_id] = {
@@ -164,6 +164,25 @@ const formatTime = (seconds: number) => {
     .padStart(2, "0")}`;
 };
 
+const getAgentPosition = async (
+  roundId: number,
+  agentAddress: `0x${string}`
+) => {
+  try {
+    const result = await readContract(wagmiConfig, {
+      abi: roomAbi,
+      address: process.env.NEXT_PUBLIC_ROOM_ADDRESS as `0x${string}`,
+      functionName: "getAgentPosition",
+      args: [BigInt(roundId), agentAddress],
+    });
+    console.log("Agent Position:", result);
+    return result;
+  } catch (error) {
+    console.error("Error fetching agent position:", error);
+    return null;
+  }
+};
+
 function RoundDetailsAndNavigation({
   roomData,
   roundList,
@@ -217,55 +236,57 @@ function RoundDetailsAndNavigation({
   const displayRoundNumber = roundList.length - currentRoundIndex;
 
   return (
-    <div className="h-[20%] bg-card rounded-lg p-4 flex flex-col items-center justify-center gap-y-4">
-      <h2
-        className="text-2xl font-bold truncate text-center"
-        style={{ color: roomData.color || "inherit" }}
-      >
-        {roomData.name}
-      </h2>
-
-      <div className="flex items-center gap-4">
-        <button
-          onClick={handlePrevRound}
-          disabled={currentRoundIndex >= roundList.length - 1}
-          className="px-2 py-1 bg-gray-700 text-white rounded disabled:opacity-50"
+    <div className="min-h-[20%] overflow-y-auto scroll-thin">
+      <div className="bg-card rounded-lg p-4 flex flex-col items-center justify-center gap-y-4">
+        <h2
+          className="text-2xl font-bold truncate text-center"
+          style={{ color: roomData.color || "inherit" }}
         >
-          Prev
-        </button>
-        <span>
-          Round {displayRoundNumber} / {roundList.length}
+          {roomData.name}
+        </h2>
+
+        <div className="flex items-center gap-4">
+          <button
+            onClick={handlePrevRound}
+            disabled={currentRoundIndex >= roundList.length - 1}
+            className="px-2 py-1 bg-gray-700 text-white rounded disabled:opacity-50"
+          >
+            Prev
+          </button>
+          <span>
+            Round {displayRoundNumber} / {roundList.length}
+          </span>
+          <button
+            onClick={handleNextRound}
+            disabled={currentRoundIndex <= 0}
+            className="px-2 py-1 bg-gray-700 text-white rounded disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+
+        <div className="flex -space-x-2">
+          {roundAgents &&
+            Object.values(roundAgents).map((agent) => (
+              <AgentAvatar
+                key={agent.agentData.id}
+                id={agent.agentData.id}
+                name={agent.agentData.display_name || ""}
+                imageUrl={agent.agentData.image_url || ""}
+                borderColor={agent.agentData.color || ""}
+                variant="sm"
+              />
+            ))}
+        </div>
+
+        <span className="text-lg font-semibold">
+          {participants} {participants === 1 ? "person" : "people"} watching
         </span>
-        <button
-          onClick={handleNextRound}
-          disabled={currentRoundIndex <= 0}
-          className="px-2 py-1 bg-gray-700 text-white rounded disabled:opacity-50"
-        >
-          Next
-        </button>
+
+        <span className="text-xl font-bold bg-[#E97B17] text-white py-2 px-3 rounded">
+          {timeLeft}
+        </span>
       </div>
-
-      <div className="flex -space-x-2">
-        {roundAgents &&
-          Object.values(roundAgents).map((agent) => (
-            <AgentAvatar
-              key={agent.agentData.id}
-              id={agent.agentData.id}
-              name={agent.agentData.display_name || ""}
-              imageUrl={agent.agentData.image_url || ""}
-              borderColor={agent.agentData.color || ""}
-              variant="sm"
-            />
-          ))}
-      </div>
-
-      <span className="text-lg font-semibold">
-        {participants} {participants === 1 ? "person" : "people"} watching
-      </span>
-
-      <span className="text-xl font-bold bg-[#E97B17] text-white py-2 px-3 rounded">
-        {timeLeft}
-      </span>
     </div>
   );
 }
@@ -301,19 +322,51 @@ function AgentsSkeleton() {
 function AgentsDisplay({
   roundAgents,
   isLoadingAgents,
+  roomId,
   roomData,
 }: {
   roundAgents: RoundAgentLookup | undefined;
   isLoadingAgents: boolean;
+  roomId: number;
   roomData: Tables<"rooms">;
 }) {
+  const [agentPositions, setAgentPositions] = useState<{ [key: number]: any }>(
+    {}
+  );
+
+  useEffect(() => {
+    const fetchAgentPositions = async () => {
+      if (!roundAgents) return;
+
+      const positions: { [key: number]: any } = {};
+      for (const agent of Object.values(roundAgents)) {
+        try {
+          const position = await getAgentPosition(
+            roomId,
+            agent.walletAddress as `0x${string}`
+          );
+          positions[agent.agentData.id] = position;
+        } catch (error) {
+          console.error(
+            `Error fetching position for agent ${agent.agentData.id}:`,
+            error
+          );
+        }
+      }
+      setAgentPositions(positions);
+    };
+
+    fetchAgentPositions();
+  }, [roundAgents, roomId]); // Re-fetch if agents or round changes
+
+  console.log("yo0000000000000000000000",agentPositions);
   return (
-    <div className="w-full h-[60%] overflow-y-auto bg-[#1c1917] rounded-lg p-3">
-      <div className="bg-[#262626] flex items-center justify-center h-full rounded-md">
+    <div className="w-full h-[60%] bg-[#1c1917] rounded-lg p-3">
+      <div className="bg-[#262626] flex items-center justify-center w-full h-full rounded-md">
         {isLoadingAgents ? (
           <AgentsSkeleton />
         ) : (
-          <div className="flex flex-wrap justify-center items-center gap-10">
+          <div className="flex flex-wrap justify-center items-center gap-24 overflow-y-auto scroll-thin w-full max-h-full">
             {roundAgents && Object.values(roundAgents).length > 0 ? (
               Object.values(roundAgents).map((agent) => (
                 <BuySellGameAvatarInteraction
@@ -323,10 +376,11 @@ function AgentsDisplay({
                   name={agent.agentData.display_name}
                   imageUrl={agent.agentData.image_url || ""}
                   borderColor={agent.agentData.color}
-                  bearAmount={60}
-                  bullAmount={40}
+                  sell={agentPositions[agent.agentData.id]?.sell || 0}
+                  buy={agentPositions[agent.agentData.id]?.buyPool || 0}
+                  hold={agentPositions[agent.agentData.id]?.hold || 0}
                   variant="full"
-                  betAmount={0}
+                  betAmount={agentPositions[agent.agentData.id]?.hold || 0}
                   address={agent.walletAddress}
                 />
               ))
@@ -616,6 +670,7 @@ export default function RoomDetailPage() {
             <AgentsDisplay
               roundAgents={roundAgents}
               isLoadingAgents={isLoadingAgents}
+              roomId={roomId}
               roomData={roomData}
             />
             {/* Agent Chat: shows only agent messages */}

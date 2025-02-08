@@ -241,7 +241,7 @@ export function PvpActionDialog({
               <div className="w-full flex items-center justify-between">
                 {/* Attack */}
                 <div className="space-y-2 text-center">
-                  <span className="block">{0.001} ETH</span>
+                  <span className="block">{0.0001} ETH</span>
                   <PvPRuleCard
                     variant="ATTACK"
                     selected={pvpVerb === "attack"}
@@ -251,7 +251,7 @@ export function PvpActionDialog({
 
                 {/* Silence */}
                 <div className="space-y-2 text-center">
-                  <span className="block">{0.001} ETH</span>
+                  <span className="block">{0.0002} ETH</span>
                   <PvPRuleCard
                     variant="SILENCE"
                     selected={pvpVerb === "silence"}
@@ -278,7 +278,7 @@ export function PvpActionDialog({
               <div className="w-full flex items-center justify-between">
                 {/* Deafen */}
                 <div className="space-y-2 text-center">
-                  <span className="block">{0.001} ETH</span>
+                  <span className="block">{0.0002} ETH</span>
                   <PvPRuleCard
                     variant="DEAFEN"
                     selected={pvpVerb === "deafen"}

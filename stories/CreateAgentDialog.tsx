@@ -27,6 +27,7 @@ import { coreAbi } from "@/lib/contract.types";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { Database } from "@/lib/database.types";
 import { formatEther } from "viem";
+import { wagmiConfig, walletClient } from "@/components/wrapper/wrapper";
 
 // Helper function to generate a random hex color.
 const generateRandomColor = (includeHash = false) => {
