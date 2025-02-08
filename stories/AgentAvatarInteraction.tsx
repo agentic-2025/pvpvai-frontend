@@ -1,26 +1,31 @@
 "use client";
 
-import { useState } from "react";
-import { cn } from "@/lib/utils";
-import { AgentAvatar } from "./AgentAvatar";
-import Image from "next/image";
-import bullIcon from "@/stories/assets/bull.svg";
-import bearIcon from "@/stories/assets/bear.svg";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogTrigger,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
+  DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+<<<<<<< HEAD
 import { useAccount } from "wagmi";
 import { wagmiConfig, walletClient } from "@/components/wrapper/wrapper";
 import { PvpActionDialog } from "./PVPActionDialog";
+=======
+>>>>>>> main
 import { roomAbi } from "@/lib/contract.types";
-import { parseEther } from "viem";
+import { cn } from "@/lib/utils";
+import bearIcon from "@/stories/assets/bear.svg";
+import bullIcon from "@/stories/assets/bull.svg";
+import Image from "next/image";
+import { useState } from "react";
+import { getAddress, parseEther } from "viem";
+import { useAccount, usePublicClient, useWriteContract } from "wagmi";
+import { AgentAvatar } from "./AgentAvatar";
+import { PvpActionDialog } from "./PVPActionDialog";
 
 interface AgentAvatarInteractionProps {
   name: string;
@@ -43,6 +48,8 @@ export function AgentAvatarInteraction({
   bullAmount,
   agentAddress,
 }: AgentAvatarInteractionProps) {
+  const publicClient = usePublicClient();
+  const { writeContract } = useWriteContract();
   // Local state for selected bet type and the bet amount (as a string)
   const [selectedBetType, setSelectedBetType] = useState<"Buy" | "Sell" | null>(
     betType || null
@@ -59,26 +66,33 @@ export function AgentAvatarInteraction({
   };
 
   const handlePlaceBet = async () => {
+    if (!publicClient) {
+      console.error("Public client not found, is the user's wallet connected?");
+      return;
+    }
     if (!userAddress || !selectedBetType) {
-      alert("Please connect your wallet and select a bet type.");
+      console.error(
+        "User address or bet type not found, is the user connected and have they selected a bet type?"
+      );
       return;
     }
 
     const betAmountNumber = parseFloat(localBetAmount);
     if (isNaN(betAmountNumber) || betAmountNumber <= 0) {
-      alert("Please enter a valid bet amount.");
+      console.error("Invalid bet amount, please enter a valid bet amount.");
       return;
     }
 
     try {
       const betTypeValue = selectedBetType === "Buy" ? 1 : 3;
       console.log("placing bet", agentAddress, betTypeValue, betAmountNumber);
-      const { request } = await wagmiConfig.simulateContract({
+      const { request } = await publicClient.simulateContract({
         abi: roomAbi,
-        address: process.env.NEXT_PUBLIC_ROOM_ADDRESS as `0x${string}`,
+
+        address: getAddress(process.env.NEXT_PUBLIC_ROOM_ADDRESS || ""), // TODO this needs to be coming down from props, it's in the rooms table.
         functionName: "placeBet",
         args: [
-          agentAddress,
+          getAddress(agentAddress),
           betTypeValue,
           parseEther(betAmountNumber.toString()),
         ],
@@ -86,7 +100,14 @@ export function AgentAvatarInteraction({
         value: parseEther(betAmountNumber.toString()),
       });
 
-      const depositTx = await walletClient.writeContract(request);
+      console.log(
+        `Calling placeBet on ${getAddress(agentAddress)} (Room: ${getAddress(
+          process.env.NEXT_PUBLIC_ROOM_ADDRESS || ""
+        )}) with args:`,
+        request.args
+      );
+
+      const depositTx = writeContract(request);
       console.log("Deposit successful:", depositTx);
       // Optionally, handle depositTx.transactionHash if needed.
     } catch (error) {
@@ -101,7 +122,7 @@ export function AgentAvatarInteraction({
           name={name}
           borderColor={borderColor}
           imageUrl={imageUrl}
-          variant="sm"
+          variant="lg"
           className={cn(
             "transition-opacity",
             selectedBetType ? "opacity-70" : ""

@@ -18,6 +18,8 @@ const emptyMessageFallback = (agentName: string): React.ReactNode => {
     "{agentName} screamed internally",
     "{agentName} struck a pose",
     "{agentName} is hoping that you're having a good day and are being your best self. Unless you're not into that, in that case, they think you should get bent. Whatever.",
+    "{agentName} is quietly plotting a coup, tomorrow",
+    "{agentName} NOTHING IS PERMANENT, EVERYTHING DECAYS, AAAAAAAAAAAAAAAAAAAAAAH",
   ];
   return (
     <p className={"text-muted-foreground italic"}>
@@ -44,12 +46,11 @@ export function AgentMessageChatLine({
   // Memoize the sender agent to avoid finding it on every render
   const senderAgent = agents?.find((a) => a.id === message.content.senderId);
 
-
   if (isAgentsLoading) return null;
-    if (!senderAgent) {
-      console.log("Couldn't find sender agent", message.content.senderId);
-      return null;
-    }
+  if (!senderAgent) {
+    console.log("Couldn't find sender agent", message.content.senderId);
+    return null;
+  }
   // We could even memoize messageContent if needed
   const messageContent = message.content.originalMessage
     ? message.content.originalMessage.content.text

@@ -1,25 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import supabase from "@/lib/config";
 import {
   Table,
   TableBody,
+  TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  TableCell,
 } from "@/components/ui/table";
+import supabase from "@/lib/config";
+import { Tables } from "@/lib/database.types";
+import { PartialExcept } from "@/lib/utils";
 import { AgentAvatar } from "@/stories/AgentAvatar";
+import usdcIcon from "@/stories/assets/crypto/usdc.svg";
 import { ClipboardCopy } from "lucide-react";
 import Image from "next/image";
-import usdcIcon from "@/stories/assets/crypto/usdc.svg";
-import { Database } from "@/lib/database.types";
-
-export type Agent = Database["public"]["Tables"]["agents"]["Row"];
+import { useEffect, useState } from "react";
 
 export default function AgentsTable() {
-  const [agents, setAgents] = useState<Agent[]>([]);
+  const [agents, setAgents] = useState<
+    PartialExcept<Tables<"agents">, "id" | "display_name" | "type" | "earnings" | "eth_wallet_address" | "image_url" | "color">[]
+  >([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

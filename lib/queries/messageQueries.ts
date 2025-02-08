@@ -4,6 +4,7 @@ import {
   gmMessageAiChatOutputSchema,
   observationMessageAiChatOutputSchema,
   publicChatMessageInputSchema,
+  publicChatMessageOutputSchema,
   pvpActionEnactedAiChatOutputSchema,
   WsMessageTypes,
 } from "@/lib/backend.types";
@@ -12,7 +13,9 @@ import { useQuery, UseQueryResult } from "@tanstack/react-query";
 import { z } from "zod";
 import { Json } from "../database.types";
 
-const parseAgentMessage = (message: Json): AllAiChatMessageSchemaTypes => {
+const parseAgentMessage = (
+  message: Json
+): AllAiChatMessageSchemaTypes | null => {
   try {
     console.log("Received message:", message);
     if (!message) {
@@ -36,8 +39,12 @@ const parseAgentMessage = (message: Json): AllAiChatMessageSchemaTypes => {
       case WsMessageTypes.PVP_ACTION_ENACTED:
         return pvpActionEnactedAiChatOutputSchema.parse(parsedMessage);
       default:
-        console.log("Error, unsupported message type:", parsedMessage);
-        throw new Error(`Unsupported message type: ${parsedMessage}`);
+        console.log(
+          "Error, unsupported message type, will exclude message from display:",
+          parsedMessage
+        );
+        return null;
+      // throw new Error(`Unsupported message type: ${parsedMessage}`);
     }
   } catch (error) {
     console.error("Error parsing message", JSON.stringify(error));
@@ -47,10 +54,11 @@ const parseAgentMessage = (message: Json): AllAiChatMessageSchemaTypes => {
 
 const parsePublicChatMessage = (
   message: Json
-): z.infer<typeof publicChatMessageInputSchema> => {
+): z.infer<typeof publicChatMessageInputSchema> | null => {
   try {
     if (!message) {
-      throw new Error("Message is null");
+      console.error("Message is null");
+      return null;
     }
     if (typeof message === "string") {
       message = JSON.parse(message);
@@ -60,7 +68,7 @@ const parsePublicChatMessage = (
     return publicChatMessageInputSchema.parse(message);
   } catch (error) {
     console.error("Error parsing public chat message", JSON.stringify(error));
-    throw error;
+    return null;
   }
 };
 
@@ -92,7 +100,10 @@ export const useRoundAgentMessages = (
       for (const row of data) {
         try {
           const parsedMessage = parseAgentMessage(row.message);
-          res.push(parsedMessage);
+          //Failed parseAgentMessage will return null, meaning the message is not supported and will be excluded from display
+          if (parsedMessage) {
+            res.push(parsedMessage);
+          }
         } catch (error) {
           console.error(
             "Error parsing message:",
@@ -111,7 +122,7 @@ export const useRoundAgentMessages = (
 
 export const useRoundUserMessages = (
   roundId: number
-): UseQueryResult<PublicChatMessage[]> => {
+): UseQueryResult<z.infer<typeof publicChatMessageOutputSchema>[]> => {
   return useQuery({
     queryKey: ["roundUserMessages", roundId],
     queryFn: async () => {
@@ -128,11 +139,14 @@ export const useRoundUserMessages = (
         throw error;
       }
 
-      const res: PublicChatMessage[] = [];
+      const res: z.infer<typeof publicChatMessageOutputSchema>[] = [];
       for (const row of data) {
         try {
           const parsedMessage = parsePublicChatMessage(row.message);
-          res.push(parsedMessage);
+          //Failed parsePublicChatMessage will return null, meaning the message is not supported and will be excluded from display
+          if (parsedMessage) {
+            res.push(parsedMessage);
+          }
         } catch (error) {
           console.error(
             "Error parsing public chat message:",

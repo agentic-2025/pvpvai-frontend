@@ -10,19 +10,17 @@ type User = Database["public"]["Tables"]["users"]["Row"];
 
 // Generator for Agent
 export const generateAgent = (overrides: Partial<Agent> = {}): Agent => ({
-  id: faker.number.int(),
+  id: faker.number.int({ min: 1, max: 10000 }),
   created_at: faker.date.recent().toISOString(),
   updated_at: faker.date.recent().toISOString(),
-  creator_id: faker.number.int(),
+  creator_id: faker.number.int({ min: 1, max: 10000 }),
   display_name: faker.internet.userName(),
   image_url: faker.image.avatar(),
-  platform: faker.helpers.arrayElement(["Autonome", "Gaia"]) as string,
+  platform: faker.helpers.arrayElement(["Autonome", "Gaia"]),
   endpoint: faker.internet.url(),
   eth_wallet_address: faker.finance.ethereumAddress(),
   sol_wallet_address: faker.finance.ethereumAddress(),
-  status: faker.helpers.arrayElement(["Up", "Down", "Unknown"]) as
-    | string
-    | null,
+  status: faker.helpers.arrayElement(["Up", "Down", "Unknown"]),
   last_health_check: faker.date.recent().toISOString(),
   character_card: faker.lorem.paragraph(),
   single_sentence_summary: faker.lorem.sentence(),
@@ -32,24 +30,24 @@ export const generateAgent = (overrides: Partial<Agent> = {}): Agent => ({
 
 // Generator for User
 export const generateUser = (overrides: Partial<User> = {}): User => ({
-  id: faker.number.int(),
+  id: faker.number.int({ min: 1, max: 10000 }),
   created_at: faker.date.recent().toISOString(),
   updated_at: faker.date.recent().toISOString(),
   address: faker.finance.ethereumAddress(),
-  chain_id: faker.helpers.arrayElement(["1", "137", "42161"]),
+  chain_id: faker.helpers.arrayElement([1, 137, 42161]),
   display_name: faker.internet.userName(),
   ...overrides,
 });
 
 // Generator for Room
 export const generateRoom = (overrides: Partial<Room> = {}): Room => ({
-  id: faker.number.int(),
+  id: faker.number.int({ min: 1, max: 10000 }),
   created_at: faker.date.recent().toISOString(),
   updated_at: faker.date.recent().toISOString(),
   name: faker.company.name(),
-  creator_id: faker.number.int(),
-  type_id: faker.number.int(),
-  chain_family: faker.helpers.arrayElement(["evm", "solana"]) as string,
+  creator_id: faker.number.int({ min: 1, max: 10000 }),
+  type_id: faker.number.int({ min: 1, max: 10 }),
+  chain_family: faker.helpers.arrayElement(["evm", "solana"]),
   chain_id: faker.number.int({ min: 1, max: 42161 }),
   contract_address: faker.finance.ethereumAddress(),
   image_url: faker.image.url(),
@@ -57,7 +55,8 @@ export const generateRoom = (overrides: Partial<Room> = {}): Room => ({
   active: true,
   round_time: faker.number.int({ min: 300, max: 900 }), // 5-15 minutes
   round_ends_on: faker.date.soon().toISOString(),
-  game_master_id: faker.helpers.maybe(() => faker.number.int()) ?? null,
+  game_master_id:
+    faker.helpers.maybe(() => faker.number.int({ min: 1, max: 10000 })) ?? null,
   room_config: {
     room_config: {},
     pvp: {
@@ -74,9 +73,9 @@ export const generateRoom = (overrides: Partial<Room> = {}): Room => ({
 export const generateRoomType = (
   overrides: Partial<RoomType> = {}
 ): RoomType => ({
-  id: faker.number.int(),
+  id: faker.number.int({ min: 1, max: 100 }),
   created_at: faker.date.recent().toISOString(),
-  updated_at: faker.date.recent().toISOString() as string | null,
+  updated_at: faker.date.recent().toISOString(),
   name: faker.helpers.arrayElement([
     "Buy Sell",
     "Prediction Market",
@@ -101,7 +100,7 @@ export const generateAgentChatMessage = (
   overrides: Partial<AgentChatMessage> = {}
 ): AgentChatMessage => ({
   agentName: faker.internet.userName(),
-  agentImageUrl: faker.helpers.maybe(() => faker.image.avatar()),
+  agentImageUrl: faker.helpers.maybe(() => faker.image.avatar()) || "",
   agentBorderColor: faker.color.rgb(),
   message: faker.lorem.paragraph(),
   sentiment: faker.helpers.maybe(() =>

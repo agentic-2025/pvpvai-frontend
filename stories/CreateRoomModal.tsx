@@ -29,9 +29,8 @@ import { PvPRuleCard } from "./PvPRuleCard";
 import { SupportedChains } from "@/lib/consts";
 import { readContract } from "viem/actions";
 import { coreAbi } from "@/lib/contract.types";
-import { wagmiConfig, walletClient } from "@/components/wrapper/wrapper";
-import { formatEther } from "viem";
-import { useAccount } from "wagmi";
+import { formatEther, getAddress } from "viem";
+import { useAccount, usePublicClient, useContractWrite } from "wagmi";
 
 type PvPRule =
   | "SILENCE"
@@ -76,6 +75,8 @@ export function CreateRoomModal({
   onOpenChange,
   initialState,
 }: CreateRoomModalProps) {
+  const publicClient = usePublicClient();
+  const { writeContract } = useContractWrite();
   const [createRoomFormState, setCreateRoomFormState] =
     useState<CreateRoomState>(
       initialState || {
@@ -180,8 +181,12 @@ export function CreateRoomModal({
 
   // Fetch fees from the contract
   const getFees = async () => {
+    if (!publicClient) {
+      console.log("No public client found in create room modal");
+      return;
+    }
     try {
-      const result = await readContract(wagmiConfig, {
+      const result = await publicClient.readContract({
         abi: coreAbi,
         address: process.env.NEXT_PUBLIC_CORE_ADDRESS as `0x${string}`,
         functionName: "getFees",
@@ -203,26 +208,30 @@ export function CreateRoomModal({
 
   const handleCreateRoom = async () => {
     if (!createRoomFormState.settings) return;
+    if (!publicClient) {
+      console.log("No public client found in create room modal handleCreateRoom");
+      return;
+    }
     const chainMeta = getChainMetadata(chain.id);
     const roundEndsOn = new Date(
       Date.now() + createRoomFormState.settings.round_time * 1000
     ).toISOString();
 
     // First, perform the deposit call on the contract
-    let transactionHash: string | null = null;
+    // let transactionHash: string | null = null;
     try {
       if (fees && userAddress) {
-        const { request } = await wagmiConfig.simulateContract({
+        const { request } = await publicClient.simulateContract({
           abi: coreAbi,
-          address: coreAddress,
+          address: getAddress(process.env.NEXT_PUBLIC_CORE_ADDRESS || ""),
           functionName: "deposit",
           value: fees[1],
           account: userAddress,
         });
 
-        const depositTx = await walletClient.writeContract(request);
+        const depositTx =  writeContract(request);
         console.log("Deposit successful:", depositTx);
-        transactionHash = depositTx;
+        // transactionHash = depositTx;
       } else {
         throw new Error("Fees or user address not loaded");
       }
@@ -264,7 +273,7 @@ export function CreateRoomModal({
       },
       gm: "0x0000000000000000000000000000000000000000",
       // Pass the transaction hash from the deposit call
-      transaction_hash: transactionHash,
+      transaction_hash: "0x123456", //TODO get the real transaction hash
     };
 
     try {

@@ -9,6 +9,7 @@ interface AgentAvatarProps {
   imageUrl?: string;
   variant?: "lg" | "md" | "sm" | "xs" | "xxs";
   className?: string;
+  disableLink?: boolean;
 }
 
 const variantStyles = {
@@ -46,22 +47,31 @@ export function AgentAvatar({
   imageUrl,
   variant = "lg",
   className,
+  disableLink = false,
 }: AgentAvatarProps) {
   const styles = variantStyles[variant];
 
+  const AvatarComponent = (
+    <Avatar
+      className={cn(styles.size, styles.border, "relative", className)}
+      style={{ borderColor }}
+    >
+      {imageUrl && <AvatarImage src={imageUrl} alt={name} />}
+      <AvatarFallback
+        className={cn(styles.text, "rounded-full text-white bg-gray-700")}
+      >
+        {name?.slice(0, 2)?.toUpperCase()}
+      </AvatarFallback>
+    </Avatar>
+  );
+
+  if (disableLink) {
+    return AvatarComponent;
+  }
+
   return (
     <Link href={`/agents/${id ? id : ""}`}>
-      <Avatar
-        className={cn(styles.size, styles.border, "relative", className)}
-        style={{ borderColor }}
-      >
-        {imageUrl && <AvatarImage src={imageUrl} alt={name} />}
-        <AvatarFallback
-          className={cn(styles.text, "rounded-full text-white bg-gray-700")}
-        >
-          {name?.slice(0, 2)?.toUpperCase()}
-        </AvatarFallback>
-      </Avatar>
+      {AvatarComponent}
     </Link>
   );
 }

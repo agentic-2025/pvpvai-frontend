@@ -22,7 +22,8 @@ type Story = StoryObj<typeof meta>;
 export const News: Story = {
   args: {
     dataType: "news",
-    message: "Bitcoin reaches new all-time high as institutional adoption grows.",
+    message:
+      "Bitcoin reaches new all-time high as institutional adoption grows.",
   },
 };
 
@@ -32,7 +33,9 @@ export const NewsWithReactNode: Story = {
     message: (
       <div className="flex flex-col gap-2">
         <span className="font-bold">Breaking News:</span>
-        <span>Bitcoin reaches new all-time high as institutional adoption grows.</span>
+        <span>
+          Bitcoin reaches new all-time high as institutional adoption grows.
+        </span>
       </div>
     ),
   },
@@ -99,4 +102,4 @@ export const PriceDataPyth: Story = {
     ),
     dataSource: "pyth",
   },
-}; 
+};

@@ -17,11 +17,11 @@ const meta = {
   },
   decorators: [
     (Story) => (
-          <Table>
-            <TableBody>
-              <Story />
-            </TableBody>
-          </Table>
+      <Table>
+        <TableBody>
+          <Story />
+        </TableBody>
+      </Table>
     ),
   ],
 } satisfies Meta<typeof RoomTableRow>;
@@ -35,7 +35,6 @@ const buySellRoom = generateRoom({
 
 const predictionRoom = generateRoom({
   type_id: 2,
-    
 });
 
 export const BuySellVariant: Story = {

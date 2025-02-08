@@ -91,6 +91,7 @@ export const AgentBadge: FC<AgentBadgeProps> = ({
                     borderColor={borderColor || color}
                     imageUrl={avatar}
                     variant={styles.avatar}
+                    disableLink={true}
                   />
                 )}
                 {displayName}
@@ -116,6 +117,7 @@ export const AgentBadge: FC<AgentBadgeProps> = ({
               borderColor={borderColor || color}
               imageUrl={avatar}
               variant="lg"
+              disableLink={true}
             />
             <div className="flex flex-col gap-2">
               <div className="text-lg font-medium text-gray-200">{name}</div>

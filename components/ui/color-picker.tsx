@@ -50,4 +50,4 @@ export function ColorPicker({
       </div>
     </div>
   );
-} 
+}

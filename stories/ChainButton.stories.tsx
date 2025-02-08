@@ -20,4 +20,4 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// ... rest of the stories remain the same, just replace NetworkButton with ChainButton 
+// ... rest of the stories remain the same, just replace NetworkButton with ChainButton

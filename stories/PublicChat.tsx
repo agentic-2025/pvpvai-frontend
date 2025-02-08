@@ -25,6 +25,7 @@ export function PublicChat({
   variant = "default",
   loading = false,
 }: PublicChatProps) {
+  console.log("messages", messages);
   const [inputValue, setInputValue] = useState("");
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
 
