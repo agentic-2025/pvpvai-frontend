@@ -17,10 +17,14 @@ import {
 } from "@/lib/backend.types";
 import supabase from "@/lib/config";
 import { Tables } from "@/lib/database.types";
-import { useRoundAgentMessages } from "@/lib/queries/messageQueries";
+import {
+  useRoundAgentMessages,
+  useRoundUserMessages,
+} from "@/lib/queries/messageQueries";
 import { AgentAvatar } from "@/stories/AgentAvatar";
 import { AgentChat } from "@/stories/AgentChat";
 import { BuySellGameAvatarInteraction } from "@/stories/BuySellGameAvatarInteraction";
+import { PublicChat } from "@/stories/PublicChat";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useState } from "react";
@@ -250,6 +254,70 @@ function isValidMessageType(
 ): messageType is WsMessageTypes {
   return Object.values(WsMessageTypes).includes(messageType as WsMessageTypes);
 }
+
+// Add this new component above the main component
+function AgentsSkeleton() {
+  return (
+    <div className="flex flex-wrap justify-center items-center gap-10">
+      {[1, 2, 3, 4].map((i) => (
+        <div
+          key={i}
+          className="flex flex-col items-center gap-2 w-[200px] h-[250px] bg-card/50 rounded-lg p-4"
+        >
+          <Skeleton className="w-24 h-24 rounded-full" />
+          <Skeleton className="w-3/4 h-6" />
+          <Skeleton className="w-1/2 h-4" />
+          <div className="flex gap-2 mt-2">
+            <Skeleton className="w-20 h-8" />
+            <Skeleton className="w-20 h-8" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AgentsDisplay({
+  roundAgents,
+  isLoadingAgents,
+}: {
+  roundAgents: RoundAgentLookup | undefined;
+  isLoadingAgents: boolean;
+}) {
+  return (
+    <div className="w-full h-[60%] overflow-y-auto bg-[#1c1917] rounded-lg p-3">
+      <div className="bg-[#262626] flex items-center justify-center h-full rounded-md">
+        {isLoadingAgents ? (
+          <AgentsSkeleton />
+        ) : (
+          <div className="flex flex-wrap justify-center items-center gap-10">
+            {roundAgents && Object.values(roundAgents).length > 0 ? (
+              Object.values(roundAgents).map((agent) => (
+                <BuySellGameAvatarInteraction
+                  key={agent.agentData.id}
+                  id={agent.agentData.id}
+                  name={agent.agentData.display_name}
+                  imageUrl={agent.agentData.image_url || ""}
+                  borderColor={agent.agentData.color}
+                  bearAmount={60}
+                  bullAmount={40}
+                  variant="full"
+                  betAmount={0}
+                  address={agent.walletAddress}
+                />
+              ))
+            ) : (
+              <span className="text-gray-400">
+                No agents available in this round
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function RoomDetailPage() {
   const params = useParams<{ id: string }>();
   const roomId = parseInt(params.id);
@@ -278,10 +346,10 @@ export default function RoomDetailPage() {
 
   const { data: roundAgentMessages, isLoading: isLoadingRoundAgentMessages } =
     useRoundAgentMessages(currentRoundId);
-  // const {
-  //   data: roundPublicChatMessages,
-  //   isLoading: isLoadingPublicChatMessages,
-  // } = useRoundUserMessages(currentRoundId);
+  const {
+    data: roundPublicChatMessages,
+    isLoading: isLoadingPublicChatMessages,
+  } = useRoundUserMessages(currentRoundId);
   const { data: roundAgents, isLoading: isLoadingAgents } =
     useRoundAgents(currentRoundId);
   // const { data: gameMaster, isLoading: isLoadingGM } =
@@ -475,33 +543,10 @@ export default function RoomDetailPage() {
         <div className="w-full flex gap-6 h-[calc(100vh-4rem)]">
           {/* Left Section: Room Info, Agents, and Agent Chat */}
           <div className="w-[65%] flex flex-col gap-6">
-            {/* Agents Display (from current round) */}
-            <div className="w-full h-[60%] overflow-y-auto bg-[#1c1917] rounded-lg p-3">
-              <div className="bg-[#262626] flex items-center justify-center h-full rounded-md">
-                <div className="flex flex-wrap justify-center items-center gap-10">
-                  {roundAgents && Object.values(roundAgents).length > 0 ? (
-                    Object.values(roundAgents).map((agent) => (
-                      <BuySellGameAvatarInteraction
-                        key={agent.agentData.id}
-                        id={agent.agentData.id}
-                        name={agent.agentData.display_name}
-                        imageUrl={agent.agentData.image_url || ""}
-                        borderColor={agent.agentData.color}
-                        bearAmount={60}
-                        bullAmount={40}
-                        variant="full"
-                        betAmount={0}
-                        address={agent.walletAddress}
-                      />
-                    ))
-                  ) : (
-                    <span className="text-gray-400">
-                      No agents available in this round
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
+            <AgentsDisplay
+              roundAgents={roundAgents}
+              isLoadingAgents={isLoadingAgents}
+            />
             {/* Agent Chat: shows only agent messages */}
             <div className="flex-1 bg-card rounded-lg overflow-hidden w-full">
               <AgentChat
@@ -528,7 +573,7 @@ export default function RoomDetailPage() {
             />
             {/* Public Chat: shows streaming public messages */}
             <div className="flex flex-col bg-card rounded-lg p-4 overflow-y-auto h-full">
-              {/* <PublicChat
+              <PublicChat
                 messages={[...(roundPublicChatMessages || []), ...messages]}
                 className="h-full"
                 currentUserAddress={String(currentUserId)}
@@ -537,7 +582,7 @@ export default function RoomDetailPage() {
                   // Optionally: implement sending message logic here.
                   console.log("User sending message:", message);
                 }}
-              /> */}
+              />
             </div>
           </div>
         </div>

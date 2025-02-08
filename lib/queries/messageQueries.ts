@@ -4,6 +4,7 @@ import {
   gmMessageAiChatOutputSchema,
   observationMessageAiChatOutputSchema,
   publicChatMessageInputSchema,
+  publicChatMessageOutputSchema,
   pvpActionEnactedAiChatOutputSchema,
   WsMessageTypes,
 } from "@/lib/backend.types";
@@ -42,6 +43,7 @@ const parseAgentMessage = (
           "Error, unsupported message type, will exclude message from display:",
           parsedMessage
         );
+        return null;
       // throw new Error(`Unsupported message type: ${parsedMessage}`);
     }
   } catch (error) {
@@ -52,10 +54,11 @@ const parseAgentMessage = (
 
 const parsePublicChatMessage = (
   message: Json
-): z.infer<typeof publicChatMessageInputSchema> => {
+): z.infer<typeof publicChatMessageInputSchema> | null => {
   try {
     if (!message) {
-      throw new Error("Message is null");
+      console.error("Message is null");
+      return null;
     }
     if (typeof message === "string") {
       message = JSON.parse(message);
@@ -65,7 +68,7 @@ const parsePublicChatMessage = (
     return publicChatMessageInputSchema.parse(message);
   } catch (error) {
     console.error("Error parsing public chat message", JSON.stringify(error));
-    throw error;
+    return null;
   }
 };
 
@@ -119,7 +122,7 @@ export const useRoundAgentMessages = (
 
 export const useRoundUserMessages = (
   roundId: number
-): UseQueryResult<PublicChatMessage[]> => {
+): UseQueryResult<z.infer<typeof publicChatMessageOutputSchema>[]> => {
   return useQuery({
     queryKey: ["roundUserMessages", roundId],
     queryFn: async () => {
@@ -136,11 +139,14 @@ export const useRoundUserMessages = (
         throw error;
       }
 
-      const res: PublicChatMessage[] = [];
+      const res: z.infer<typeof publicChatMessageOutputSchema>[] = [];
       for (const row of data) {
         try {
           const parsedMessage = parsePublicChatMessage(row.message);
-          res.push(parsedMessage);
+          //Failed parsePublicChatMessage will return null, meaning the message is not supported and will be excluded from display
+          if (parsedMessage) {
+            res.push(parsedMessage);
+          }
         } catch (error) {
           console.error(
             "Error parsing public chat message:",

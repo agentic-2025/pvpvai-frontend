@@ -17,12 +17,6 @@ import { GMChatLine } from "./GMChatLine";
 import { ObservationChatLine } from "./ObservationChatLine";
 import { PvPActionChatLine } from "./PvPActionChatLine";
 
-// <resource>AiChatOutputSchema schemas are the messages that players will receive for AI Chat
-// export type AgentChatMessage =
-//   | z.infer<typeof pvpActionEnactedAiChatOutputSchema>
-//   | z.infer<typeof gmMessageAiChatOutputSchema>
-//   | z.infer<typeof agentMessageAiChatOutputSchema>
-//   | z.infer<typeof observationMessageAiChatOutputSchema>;
 
 interface AgentChatProps {
   messages: AllAiChatMessageSchemaTypes[];
