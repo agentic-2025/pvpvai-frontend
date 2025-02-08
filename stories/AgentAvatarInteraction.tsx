@@ -26,16 +26,24 @@ import { getAddress, parseEther } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { AgentAvatar } from "./AgentAvatar";
 import { PvpActionDialog } from "./PVPActionDialog";
+import { Tabs, TabsList, TabsTrigger } from "@radix-ui/react-tabs";
+import AnimatedBackground from "@/components/ui/animated-tabs";
 
 interface AgentAvatarInteractionProps {
   name: string;
   borderColor: string;
   imageUrl?: string;
   betAmount: number; // initial/default bet amount in SOL
-  betType?: "Buy" | "Sell"; // initial bet type if any
+  betType?: "buy" | "hold" | "sell" | null; // initial bet type if any
   bearAmount: number; // percentage for Sell side
   bullAmount: number; // percentage for Buy side
   agentAddress: `0x${string}`;
+}
+
+const betTypeMap = {
+  buy: 1,
+  hold: 2,
+  sell: 3,
 }
 
 export function AgentAvatarInteraction({
@@ -51,7 +59,7 @@ export function AgentAvatarInteraction({
   const publicClient = usePublicClient();
   const { writeContract } = useWriteContract();
   // Local state for selected bet type and the bet amount (as a string)
-  const [selectedBetType, setSelectedBetType] = useState<"Buy" | "Sell" | null>(
+  const [selectedBetType, setSelectedBetType] = useState<"buy" | "hold" | "sell" | null>(
     betType || null
   );
   const [localBetAmount, setLocalBetAmount] = useState<string>(
@@ -59,10 +67,16 @@ export function AgentAvatarInteraction({
   );
 
   const { address: userAddress } = useAccount();
+  const [betAmountError, setBetAmountError] = useState<string | null>(null);
 
   // Update the local bet amount as the user types
   const handleBetAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (parseFloat(e.target.value) < 0) {
+      setBetAmountError("Bet amount must be greater than 0");
+      return;
+    }
     setLocalBetAmount(e.target.value);
+    setBetAmountError(null);
   };
 
   const handlePlaceBet = async () => {
@@ -84,7 +98,7 @@ export function AgentAvatarInteraction({
     }
 
     try {
-      const betTypeValue = selectedBetType === "Buy" ? 1 : 3;
+      const betTypeValue = betTypeMap[selectedBetType];
       console.log("placing bet", agentAddress, betTypeValue, betAmountNumber);
       const { request } = await publicClient.simulateContract({
         abi: roomAbi,
@@ -115,6 +129,12 @@ export function AgentAvatarInteraction({
     }
   };
 
+  const handlePositionChange = (value: string | null) => {
+    if (value) {
+      setSelectedBetType(value as "buy" | "hold" | "sell");
+    }
+  };
+
   return (
     <Dialog>
       <div className="group relative">
@@ -140,40 +160,17 @@ export function AgentAvatarInteraction({
               <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle>
-                    {selectedBetType === "Sell"
+                    {selectedBetType === "sell"
                       ? "Modify or Cancel Sell Bet"
-                      : selectedBetType === "Buy"
+                      : selectedBetType === "hold"
+                      ? "Modify or Cancel Hold Bet"
+                      : selectedBetType === "buy"
                       ? "Modify or Cancel Buy Bet"
                       : "Place a Bet"}
                   </DialogTitle>
                   <DialogDescription>
                     <div className="flex flex-col items-center pt-6 gap-y-4">
-                      <div className="flex items-center justify-between w-full h-60">
-                        {/* Sell Side */}
-                        <div className="space-y-2 text-center">
-                          <Image
-                            src={bearIcon}
-                            alt="Sell"
-                            width={64}
-                            height={64}
-                            className="w-16 h-16"
-                          />
-                          <h5 className="text-red-600 text-3xl font-bold">
-                            {bearAmount}%
-                          </h5>
-                          <button
-                            onClick={() => setSelectedBetType("Sell")}
-                            className={cn(
-                              "px-6 h-8 text-lg font-medium rounded",
-                              selectedBetType === "Sell"
-                                ? "bg-red-600 text-white"
-                                : "border border-red-500 text-red-600"
-                            )}
-                          >
-                            SELL
-                          </button>
-                        </div>
-
+                      <div className="flex justify-center w-full">
                         {/* Avatar in the middle */}
                         <AgentAvatar
                           name={name}
@@ -182,44 +179,55 @@ export function AgentAvatarInteraction({
                           variant="lg"
                           className="mx-4"
                         />
-
-                        {/* Buy Side */}
-                        <div className="space-y-2 text-center">
-                          <Image
-                            src={bullIcon}
-                            alt="Buy"
-                            width={64}
-                            height={64}
-                            className="w-16 h-16"
-                          />
-                          <h5 className="text-primary text-3xl font-bold">
-                            {bullAmount}%
-                          </h5>
-                          <button
-                            onClick={() => setSelectedBetType("Buy")}
-                            className={cn(
-                              "px-6 h-8 text-lg font-medium rounded",
-                              selectedBetType === "Buy"
-                                ? "bg-primary text-white"
-                                : "border border-primary text-primary"
-                            )}
-                          >
-                            BUY
-                          </button>
-                        </div>
                       </div>
+                      <div className="flex justify-center w-full">
+                      <AnimatedBackground
+                          className="bg-secondary/50 rounded-md"
+                          defaultValue={selectedBetType as string || undefined}
+                          onValueChange={handlePositionChange}
+                        >
+                          {["buy", "hold", "sell"].map((type) => (
+                            <button
+                              key={type}
+                              data-id={type}
+                              className="px-6 py-3 rounded-md text-xl font-medium transition-colors"
+                            >
+
+                              {type.toUpperCase()}
+                            </button>
+                          ))}
+                        </AnimatedBackground>
+                      </div>
+
+
 
                       {/* Bet Amount Input */}
                       <div className="flex items-center justify-center gap-x-4 w-full">
                         <Input
                           type="number"
+                          step="0.01"
                           value={localBetAmount}
                           onChange={handleBetAmountChange}
                           placeholder="Enter bet amount"
                           className="w-1/2 mb-2"
                         />
-                        <span className="text-lg font-medium">SOL</span>
+                        {[1, 0.1, 0.01, 0.001, 0.0001].map((amount) => (
+                          <button
+                            key={amount}
+                            onClick={() => {
+                              setLocalBetAmount(amount.toString());
+                              setBetAmountError(null);
+                            }}
+                            className="text-xs text-gray-400"
+                          >
+                            {amount}
+                          </button>
+                        ))}
+                        <span className="text-lg font-medium">ETH</span>
                       </div>
+                      {betAmountError && (
+                        <p className="text-red-500 text-sm">{betAmountError}</p>
+                      )}
                     </div>
                   </DialogDescription>
                 </DialogHeader>
@@ -227,9 +235,10 @@ export function AgentAvatarInteraction({
                 {/* Bottom Dynamic Button Text triggers the deposit call */}
                 <Button
                   onClick={handlePlaceBet}
+                  disabled={betAmountError !== null || !selectedBetType}
                   className="mt-4 text-center bg-secondary-foreground/40 hover:bg-secondary-foreground/20 min-w-24 h-10 w-fit text-white text-lg font-medium mx-auto"
                 >
-                  Bet ${localBetAmount} SOL on ${selectedBetType}
+                  Bet ${localBetAmount} ETH on ${selectedBetType}
                 </Button>
               </DialogContent>{" "}
             </Dialog>
