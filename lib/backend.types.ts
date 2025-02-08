@@ -380,6 +380,13 @@ export type PvpDeafenStatusType = z.infer<typeof deafenStatusSchema>;
 export type PvpPoisonStatusType = z.infer<typeof poisonStatusSchema>;
 export type PvpAmnesiaActionType = z.infer<typeof amnesiaActionSchema>;
 
+export type PvpAllAllowedParametersType =
+  | PvpAttackActionType["parameters"]
+  | PvpDeceiveStatusType["parameters"]
+  | PvpBlindStatusType["parameters"]
+  | PvpSilenceStatusType["parameters"]
+  | PvpDeafenStatusType["parameters"]
+  | PvpPoisonStatusType["parameters"];
 export type PvpAllPvpActionsType = z.infer<typeof pvpActionSchema>;
 
 // Update the pvpActionEnactedAiChatOutputSchema

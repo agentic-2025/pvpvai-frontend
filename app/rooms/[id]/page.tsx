@@ -18,6 +18,7 @@ import {
 import supabase from "@/lib/config";
 import { Tables } from "@/lib/database.types";
 import { useRoundAgentMessages } from "@/lib/queries/messageQueries";
+import { AgentAvatar } from "@/stories/AgentAvatar";
 import { AgentChat } from "@/stories/AgentChat";
 import { BuySellGameAvatarInteraction } from "@/stories/BuySellGameAvatarInteraction";
 import { useQuery } from "@tanstack/react-query";
@@ -88,12 +89,12 @@ const useRoundAgents = (roundId: number) => {
       // Transform array into lookup object
       return data?.reduce<RoundAgentLookup>((acc, roundAgent) => {
         if (roundAgent.agent_id && roundAgent.rounds.rooms.room_agents) {
-          let walletAddress = roundAgent.rounds.rooms.room_agents.find(
+          const walletAddress = roundAgent.rounds.rooms.room_agents.find(
             (roomAgent) => roomAgent.agent_id === roundAgent.agent_id
           )?.wallet_address;
 
           if (!walletAddress) {
-            throw "Wallet address not found for agent"
+            throw "Wallet address not found for agent";
           }
 
           acc[roundAgent.agent_id] = {
@@ -146,6 +147,8 @@ function RoundDetailsAndNavigation({
   isLoadingRoom,
   isLoadingRounds,
   setCurrentRoundIndex,
+  roundAgents,
+  participants,
 }: {
   roomData: Tables<"rooms">;
   roundList: { id: number; created_at: string }[];
@@ -154,7 +157,10 @@ function RoundDetailsAndNavigation({
   isLoadingRoom: boolean;
   isLoadingRounds: boolean;
   setCurrentRoundIndex: (index: number) => void;
+  roundAgents: RoundAgentLookup | undefined;
+  participants: number;
 }) {
+  // Update handlers to match display order
   const handlePrevRound = () => {
     if (currentRoundIndex < roundList.length - 1) {
       setCurrentRoundIndex(currentRoundIndex + 1);
@@ -170,20 +176,30 @@ function RoundDetailsAndNavigation({
   if (isLoadingRoom || isLoadingRounds) {
     return (
       <div className="h-[20%] bg-card rounded-lg p-4 flex flex-col items-center justify-center gap-y-2">
+        <Skeleton className="h-10 w-48" />
         <div className="flex items-center gap-4">
           <Skeleton className="h-8 w-16" />
           <Skeleton className="h-6 w-32" />
           <Skeleton className="h-8 w-16" />
         </div>
-        <Skeleton className="h-6 w-24" />
         <Skeleton className="h-12 w-32" />
-        <Skeleton className="h-6 w-40" />
+        <Skeleton className="h-6 w-32" />
+        <Skeleton className="h-8 w-32" />
       </div>
     );
   }
 
+  const displayRoundNumber = roundList.length - currentRoundIndex;
+
   return (
-    <div className="h-[20%] bg-card rounded-lg p-4 flex flex-col items-center justify-center gap-y-2">
+    <div className="h-[20%] bg-card rounded-lg p-4 flex flex-col items-center justify-center gap-y-4">
+      <h2
+        className="text-2xl font-bold truncate text-center"
+        style={{ color: roomData.color || "inherit" }}
+      >
+        {roomData.name}
+      </h2>
+
       <div className="flex items-center gap-4">
         <button
           onClick={handlePrevRound}
@@ -193,7 +209,7 @@ function RoundDetailsAndNavigation({
           Prev
         </button>
         <span>
-          Round {currentRoundIndex + 1} / {roundList.length}
+          Round {displayRoundNumber} / {roundList.length}
         </span>
         <button
           onClick={handleNextRound}
@@ -203,12 +219,27 @@ function RoundDetailsAndNavigation({
           Next
         </button>
       </div>
-      <span>Room ID: {roomData.id}</span>
-      <span className="text-3xl font-bold bg-[#E97B17] text-white py-3 px-4">
-        {timeLeft}
-      </span>
+
+      <div className="flex -space-x-2">
+        {roundAgents &&
+          Object.values(roundAgents).map((agent) => (
+            <AgentAvatar
+              key={agent.agentData.id}
+              id={agent.agentData.id}
+              name={agent.agentData.display_name || ""}
+              imageUrl={agent.agentData.image_url || ""}
+              borderColor={agent.agentData.color || ""}
+              variant="sm"
+            />
+          ))}
+      </div>
+
       <span className="text-lg font-semibold">
-        {roomData.participants} Participants
+        {participants} {participants === 1 ? "person" : "people"} watching
+      </span>
+
+      <span className="text-xl font-bold bg-[#E97B17] text-white py-2 px-3 rounded">
+        {timeLeft}
       </span>
     </div>
   );
@@ -444,9 +475,6 @@ export default function RoomDetailPage() {
         <div className="w-full flex gap-6 h-[calc(100vh-4rem)]">
           {/* Left Section: Room Info, Agents, and Agent Chat */}
           <div className="w-[65%] flex flex-col gap-6">
-            <h1 className="text-4xl font-bold truncate text-center">
-              {roomData.name}
-            </h1>
             {/* Agents Display (from current round) */}
             <div className="w-full h-[60%] overflow-y-auto bg-[#1c1917] rounded-lg p-3">
               <div className="bg-[#262626] flex items-center justify-center h-full rounded-md">
@@ -481,6 +509,7 @@ export default function RoomDetailPage() {
                 showHeader={false}
                 messages={[...(roundAgentMessages || []), ...aiChatMessages]}
                 loading={isLoadingRoundAgentMessages}
+                roundId={currentRoundId}
               />
             </div>
           </div>
@@ -488,13 +517,14 @@ export default function RoomDetailPage() {
           <div className="w-[35%] flex flex-col gap-6">
             <RoundDetailsAndNavigation
               roomData={roomData}
-              // participants={participants}
               roundList={roundList}
               currentRoundIndex={currentRoundIndex}
               timeLeft={timeLeft}
               isLoadingRoom={isLoadingRoom}
               isLoadingRounds={isLoadingRounds}
               setCurrentRoundIndex={setCurrentRoundIndex}
+              roundAgents={roundAgents}
+              participants={participants}
             />
             {/* Public Chat: shows streaming public messages */}
             <div className="flex flex-col bg-card rounded-lg p-4 overflow-y-auto h-full">

@@ -14,6 +14,9 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export type PartialExcept<T, K extends keyof T> = Partial<Omit<T, K>> & Pick<T, K>;
+
+
 function getTimerColor(secondsLeft: number): string {
   const minutes = secondsLeft / 60;
 

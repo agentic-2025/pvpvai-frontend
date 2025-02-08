@@ -12,7 +12,9 @@ import { useQuery, UseQueryResult } from "@tanstack/react-query";
 import { z } from "zod";
 import { Json } from "../database.types";
 
-const parseAgentMessage = (message: Json): AllAiChatMessageSchemaTypes => {
+const parseAgentMessage = (
+  message: Json
+): AllAiChatMessageSchemaTypes | null => {
   try {
     console.log("Received message:", message);
     if (!message) {
@@ -36,8 +38,11 @@ const parseAgentMessage = (message: Json): AllAiChatMessageSchemaTypes => {
       case WsMessageTypes.PVP_ACTION_ENACTED:
         return pvpActionEnactedAiChatOutputSchema.parse(parsedMessage);
       default:
-        console.log("Error, unsupported message type:", parsedMessage);
-        throw new Error(`Unsupported message type: ${parsedMessage}`);
+        console.log(
+          "Error, unsupported message type, will exclude message from display:",
+          parsedMessage
+        );
+      // throw new Error(`Unsupported message type: ${parsedMessage}`);
     }
   } catch (error) {
     console.error("Error parsing message", JSON.stringify(error));
@@ -92,7 +97,10 @@ export const useRoundAgentMessages = (
       for (const row of data) {
         try {
           const parsedMessage = parseAgentMessage(row.message);
-          res.push(parsedMessage);
+          //Failed parseAgentMessage will return null, meaning the message is not supported and will be excluded from display
+          if (parsedMessage) {
+            res.push(parsedMessage);
+          }
         } catch (error) {
           console.error(
             "Error parsing message:",

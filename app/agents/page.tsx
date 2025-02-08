@@ -225,19 +225,19 @@ export default function AgentsPage() {
                   </TableCell>
 
                   {/* Deployed To */}
-                    <TableCell className="text-lg text-center text-gray-900 dark:text-gray-300">
-                      <Image
-                        src={
-                          agent.platform === "Autonome"
-                            ? autonomeIcon
-                            : agent.platform === "Gaia"
-                            ? gaiaIcon
-                            : localIcon
-                        }
-                        alt={`Deployed to ${agent.platform}`}
-                        className="h-6 w-fit mx-auto"
-                      />
-                    </TableCell>
+                  <TableCell className="text-lg text-center text-gray-900 dark:text-gray-300">
+                    <Image
+                      src={
+                        agent.platform === "Autonome"
+                          ? autonomeIcon
+                          : agent.platform === "Gaia"
+                          ? gaiaIcon
+                          : localIcon
+                      }
+                      alt={`Deployed to ${agent.platform}`}
+                      className="h-6 w-fit mx-auto"
+                    />
+                  </TableCell>
 
                   {/* Lifetime Earnings */}
                   <TableCell className="text-lg text-center text-gray-900 dark:text-gray-300">

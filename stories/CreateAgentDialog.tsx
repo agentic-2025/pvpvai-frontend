@@ -23,9 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { wagmiConfig, walletClient } from "@/components/wrapper/wrapper";
 import { coreAbi } from "@/lib/contract.types";
-import { useAccount } from "wagmi";
+import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { Database } from "@/lib/database.types";
 import { formatEther } from "viem";
 
@@ -43,6 +42,8 @@ const generateRandomColor = (includeHash = false) => {
 const totalSteps = 7;
 
 export default function CreateAgentModal() {
+  const { writeContract } = useWriteContract();
+  const publicClient = usePublicClient();
   const [step, setStep] = useState(0);
   const [open, setOpen] = useState(false);
   const [agentData, setAgentData] = useState({
@@ -141,8 +142,12 @@ export default function CreateAgentModal() {
 
   // Fetch fees from the contract
   const getFees = async () => {
+    if (!publicClient) {
+      console.error("Public client not found");
+      return null;
+    }
     try {
-      const result = await readContract(wagmiConfig, {
+      const result = await publicClient?.readContract({
         abi: coreAbi,
         address: process.env.NEXT_PUBLIC_CORE_ADDRESS as `0x${string}`,
         functionName: "getFees",

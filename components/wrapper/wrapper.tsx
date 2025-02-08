@@ -3,28 +3,27 @@
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { Navbar } from "@/stories/Navbar";
+import { getDefaultConfig, RainbowKitProvider } from "@rainbow-me/rainbowkit";
+import "@rainbow-me/rainbowkit/styles.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import "@rainbow-me/rainbowkit/styles.css";
-import { getDefaultConfig, RainbowKitProvider } from "@rainbow-me/rainbowkit";
-import { WagmiProvider } from "wagmi";
-import { createPublicClient, custom, createWalletClient, http } from "viem";
 import { baseSepolia } from "viem/chains";
+import { WagmiProvider } from "wagmi";
 
-export const wagmiConfig = createPublicClient({
-  chain: baseSepolia,
-  transport: http(
-    `https://base-sepolia.g.alchemy.com/v2/wY-X7zwF8AcHhyx5r7bN24reZkc_E2Pd`
-  ),
-});
+// const wagmiConfig = createPublicClient({
+//   chain: baseSepolia,
+//   transport: http(
+//     `https://base-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`
+//   ),
+// });
 
-export const walletClient = createWalletClient({
-  chain: baseSepolia,
-  transport: custom(window.ethereum),
-});
+// const walletClient = createWalletClient({
+//   chain: baseSepolia,
+//   transport: custom(window.ethereum),
+// });
 
 export const config = getDefaultConfig({
-  appName: "My RainbowKit App",
+  appName: "PvPvAI",
   projectId: `${process.env.NEXT_PUBLIC_RAINBOWKIT_PROJECT_ID}`,
   chains: [baseSepolia],
   ssr: true, // If your dApp uses server side rendering (SSR)

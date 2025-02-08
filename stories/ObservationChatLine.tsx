@@ -1,4 +1,4 @@
-import { messagesRestResponseSchema, observationMessageAiChatOutputSchema } from "@/lib/backend.types";
+import { observationMessageAiChatOutputSchema } from "@/lib/backend.types";
 import { FC } from "react";
 import { z } from "zod";
 import { AgentChatLine } from "./AgentChatLine";

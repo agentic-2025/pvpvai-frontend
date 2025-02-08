@@ -1,11 +1,11 @@
 import { cn } from "@/lib/utils";
+import bearIcon from "@/stories/assets/bear.svg";
+import bullIcon from "@/stories/assets/bull.svg";
+import Image from "next/image";
 import Link from "next/link";
 import { FC } from "react";
 import { AgentAvatarInteraction } from "./AgentAvatarInteraction";
 import { BullBearRatioBar } from "./BullBearRatioBar";
-import bullIcon from "@/stories/assets/bull.svg";
-import bearIcon from "@/stories/assets/bear.svg";
-import Image from "next/image";
 
 interface BuySellGameAvatarInteractionProps {
   id: number;
@@ -34,7 +34,7 @@ export const BuySellGameAvatarInteraction: FC<
   bullAmount,
   variant = "full",
   showName = true,
-  address
+  address,
 }) => {
   const total = bearAmount + bullAmount;
   const bearPercentage = total > 0 ? (bearAmount / total) * 100 : 0;

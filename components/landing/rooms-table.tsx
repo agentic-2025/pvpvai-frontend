@@ -1,19 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import supabase from "@/lib/config";
 import {
   Table,
   TableBody,
+  TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  TableCell,
 } from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
+import supabase from "@/lib/config";
+import { chainMetadata } from "@/lib/utils";
 import { AgentAvatar } from "@/stories/AgentAvatar";
 import Image from "next/image";
-import { chainMetadata } from "@/lib/utils";
-import { Database } from "@/lib/database.types";
+import { useEffect, useState } from "react";
 
 // Define a type for Room with joined rounds and agents.
 export type RoomWithRelations = {
@@ -36,9 +36,9 @@ export type RoomWithRelations = {
 };
 
 export default function LatestRoomsTable() {
+  const { toast } = useToast();
   const [rooms, setRooms] = useState<RoomWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>("");
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -70,7 +70,11 @@ export default function LatestRoomsTable() {
         .limit(5);
 
       if (error) {
-        setError(error.message);
+        toast({
+          variant: "destructive",
+          title: "Error fetching rooms",
+          description: error.message,
+        });
       } else if (data) {
         setRooms(data as RoomWithRelations[]);
       }
@@ -78,7 +82,7 @@ export default function LatestRoomsTable() {
     };
 
     fetchRooms();
-  }, []);
+  }, [toast]);
 
   // Create an array of 5 skeleton rows with static row numbers.
   const skeletonRows = Array.from({ length: 5 }).map((_, index) => (
