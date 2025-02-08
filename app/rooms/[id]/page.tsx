@@ -22,9 +22,12 @@ import { AgentChat } from "@/stories/AgentChat";
 import { BuySellGameAvatarInteraction } from "@/stories/BuySellGameAvatarInteraction";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import useWebSocket from "react-use-websocket";
 import { z } from "zod";
+import { roomAbi } from "@/lib/contract.types";
+import { getBlock, readContract } from "viem/actions";
+import { wagmiConfig } from "@/components/wrapper/wrapper";
 
 // --- Query Hooks ---
 const useRoomDetails = (roomId: number) => {
@@ -73,10 +76,10 @@ const useRoundAgents = (roundId: number) => {
         .from("round_agents")
         .select(
           `
-          *,
-          agents(*),
-          rounds(rooms(room_agents(agent_id, wallet_address)))
-        `
+            *,
+            agents(*),
+            rounds(rooms(room_agents(agent_id, wallet_address)))
+          `
         )
         .eq("round_id", roundId);
       if (error) {
@@ -93,7 +96,7 @@ const useRoundAgents = (roundId: number) => {
           )?.wallet_address;
 
           if (!walletAddress) {
-            throw "Wallet address not found for agent"
+            throw "Wallet address not found for agent";
           }
 
           acc[roundAgent.agent_id] = {
@@ -109,34 +112,52 @@ const useRoundAgents = (roundId: number) => {
   });
 };
 
-// const useRoundGameMaster = (roundId: number) => {
-//   return useQuery({
-//     queryKey: ["roundGameMaster", roundId],
-//     queryFn: async () => {
-//       const { data: round, error: roundError } = await supabase
-//         .from("rounds")
-//         .select("game_master_id")
-//         .eq("id", roundId)
-//         .single();
-//       if (roundError) throw roundError;
+const fetchCurrentRoundId = async () => {
+  try {
+    const result = await readContract(wagmiConfig, {
+      abi: roomAbi,
+      address: process.env.NEXT_PUBLIC_ROOM_ADDRESS as `0x${string}`,
+      functionName: "currentRoundId",
+    });
+    return Number(result);
+  } catch (error) {
+    console.error("Error fetching current round ID:", error);
+    return null;
+  }
+};
 
-//       if (!round?.game_master_id) return null;
+const getRoundEndTime = async (roundId: number) => {
+  try {
+    const result = await readContract(wagmiConfig, {
+      abi: roomAbi,
+      address: process.env.NEXT_PUBLIC_ROOM_ADDRESS as `0x${string}`,
+      functionName: "getRoundEndTime",
+      args: [BigInt(roundId)],
+    });
+    return Number(result);
+  } catch (error) {
+    console.error("Error fetching round end time:", error);
+    return null;
+  }
+};
 
-//       const { data: gm, error: gmError } = await supabase
-//         .from("agents")
-//         .select(`*`)
-//         .eq("id", round.game_master_id)
-//         .single();
-//       if (gmError) {
-//         console.error("Error fetching game master", gmError);
-//         throw gmError;
-//       }
+const fetchCurrentBlockTimestamp = async () => {
+  try {
+    const block = await getBlock(wagmiConfig);
+    return Math.floor(Number(block.timestamp)); // Ensure seconds, not milliseconds
+  } catch (error) {
+    console.error("Error fetching current block timestamp:", error);
+    return null;
+  }
+};
 
-//       return gm;
-//     },
-//     enabled: !!roundId,
-//   });
-// };
+const formatTime = (seconds: number) => {
+  const minutes = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${minutes.toString().padStart(2, "0")}:${secs
+    .toString()
+    .padStart(2, "0")}`;
+};
 
 function RoundDetailsAndNavigation({
   roomData,
@@ -219,17 +240,20 @@ function isValidMessageType(
 ): messageType is WsMessageTypes {
   return Object.values(WsMessageTypes).includes(messageType as WsMessageTypes);
 }
+
 export default function RoomDetailPage() {
   const params = useParams<{ id: string }>();
   const roomId = parseInt(params.id);
-  const currentUserId = 1; //TODO Do not hardcode me
+  const currentUserId = 1; // TODO: Do not hardcode me
 
-  // State for room details (common data)
-  const [timeLeft, setTimeLeft] = useState<string | null>(null);
+  // Timer states
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [formattedTime, setFormattedTime] = useState<string>("--:--:--");
+
   // Separate states for public chat and agent messages
   const [messages, setMessages] = useState<
     z.infer<typeof publicChatMessageInputSchema>[]
-  >([]); //TODO fix type
+  >([]); // TODO: fix type
   const [participants, setParticipants] = useState<number>(0);
   const [aiChatMessages, setAiChatMessages] = useState<
     AllAiChatMessageSchemaTypes[]
@@ -402,7 +426,6 @@ export default function RoomDetailPage() {
         }
       },
       onClose: () => {
-        // console.log("WebSocket disconnected");
         const ws = getWebSocket();
         (ws as any).retries = ((ws as any).retries || 0) + 1;
         toast({
@@ -422,16 +445,61 @@ export default function RoomDetailPage() {
       },
     });
 
-  // const connectionStatus = {
-  //   [ReadyState.CONNECTING]: "Connecting",
-  //   [ReadyState.OPEN]: "Open",
-  //   [ReadyState.CLOSING]: "Closing",
-  //   [ReadyState.CLOSED]: "Closed",
-  //   [ReadyState.UNINSTANTIATED]: "Uninstantiated",
-  // }[readyState];
-  // console.log("WebSocket status:", connectionStatus);
+  // --- Timer Logic ---
+  // Instead of refreshing the timer every 5 seconds only,
+  // we use a two‑tier approach:
+  // 1. A 1‑second interval that decrements the local timer.
+  // 2. A 5‑second interval that re‑fetches the round end time from the blockchain.
+  useEffect(() => {
+    const updateTimer = async () => {
+      const roundIdFromContract = await fetchCurrentRoundId();
+      if (!roundIdFromContract) return;
+      const roundEndTimeFetched = await getRoundEndTime(roundIdFromContract);
+      if (!roundEndTimeFetched) return;
+      const currentTimestamp = await fetchCurrentBlockTimestamp();
+      if (!currentTimestamp) return;
 
-  if (isLoadingRoom) return <Loader />;
+      console.log("Round End Time:", roundEndTimeFetched);
+      console.log("Current Timestamp:", currentTimestamp);
+
+      const baseRemainingTime = roundEndTimeFetched - currentTimestamp;
+      setTimeLeft(baseRemainingTime > 0 ? baseRemainingTime : 0);
+      console.log("Time updated: ", baseRemainingTime);
+    };
+
+    // Initial fetch
+    updateTimer();
+
+    // Countdown: decrement the timer every second
+    const countdownInterval = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev === null) return prev;
+        const newTime = prev - 1;
+        return newTime >= 0 ? newTime : 0;
+      });
+    }, 1000);
+
+    // Refresh the timer data every 5 seconds to adjust for drift
+    const refreshInterval = setInterval(updateTimer, 5000);
+
+    return () => {
+      clearInterval(countdownInterval);
+      clearInterval(refreshInterval);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (timeLeft !== null) {
+      setFormattedTime(timeLeft > 0 ? formatTime(timeLeft) : "00:00");
+    }
+  }, [timeLeft]);
+
+  if (isLoadingRoom)
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader />
+      </div>
+    );
   if (!roomData)
     return (
       <div className="flex items-center justify-center h-screen">
@@ -463,7 +531,7 @@ export default function RoomDetailPage() {
                         bullAmount={40}
                         variant="full"
                         betAmount={0}
-                        address={agent.walletAddress}
+                        address={agent.walletAddress as `0x${string}`}
                       />
                     ))
                   ) : (
@@ -488,26 +556,25 @@ export default function RoomDetailPage() {
           <div className="w-[35%] flex flex-col gap-6">
             <RoundDetailsAndNavigation
               roomData={roomData}
-              // participants={participants}
               roundList={roundList}
               currentRoundIndex={currentRoundIndex}
-              timeLeft={timeLeft}
+              timeLeft={formattedTime} // <-- Formatted string (e.g., "04:32")
               isLoadingRoom={isLoadingRoom}
               isLoadingRounds={isLoadingRounds}
               setCurrentRoundIndex={setCurrentRoundIndex}
             />
-            {/* Public Chat: shows streaming public messages */}
+            {/* Public Chat (currently commented out) */}
             <div className="flex flex-col bg-card rounded-lg p-4 overflow-y-auto h-full">
               {/* <PublicChat
-                messages={[...(roundPublicChatMessages || []), ...messages]}
-                className="h-full"
-                currentUserAddress={String(currentUserId)}
-                loading={isLoadingPublicChatMessages}
-                onSendMessage={(message) => {
-                  // Optionally: implement sending message logic here.
-                  console.log("User sending message:", message);
-                }}
-              /> */}
+                  messages={[...(roundPublicChatMessages || []), ...messages]}
+                  className="h-full"
+                  currentUserAddress={String(currentUserId)}
+                  loading={isLoadingPublicChatMessages}
+                  onSendMessage={(message) => {
+                    // Optionally: implement sending message logic here.
+                    console.log("User sending message:", message);
+                  }}
+                /> */}
             </div>
           </div>
         </div>

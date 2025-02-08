@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAccount, useChainId, useConfig, usePublicClient, useSwitchChain } from "wagmi";
+import { useAccount } from "wagmi";
 import { wagmiConfig, walletClient } from "@/components/wrapper/wrapper";
 import { PvpActionDialog } from "./PVPActionDialog";
 import { roomAbi } from "@/lib/contract.types";
@@ -30,7 +30,7 @@ interface AgentAvatarInteractionProps {
   betType?: "Buy" | "Sell"; // initial bet type if any
   bearAmount: number; // percentage for Sell side
   bullAmount: number; // percentage for Buy side
-  agentAddress: string;
+  agentAddress: `0x${string}`;
 }
 
 export function AgentAvatarInteraction({
