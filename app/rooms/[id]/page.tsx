@@ -33,6 +33,7 @@ import { z } from "zod";
 import { roomAbi } from "@/lib/contract.types";
 import { getBlock, readContract } from "viem/actions";
 import { wagmiConfig } from "@/components/wrapper/wrapper";
+import { getAddress } from "viem";
 
 // --- Query Hooks ---
 const useRoomDetails = (roomId: number) => {
@@ -117,11 +118,11 @@ const useRoundAgents = (roundId: number) => {
   });
 };
 
-const fetchCurrentRoundId = async () => {
+const fetchCurrentRoundId = async (contractAddress: string) => {
   try {
     const result = await readContract(wagmiConfig, {
       abi: roomAbi,
-      address: process.env.NEXT_PUBLIC_ROOM_ADDRESS as `0x${string}`,
+      address: getAddress(contractAddress),
       functionName: "currentRoundId",
     });
     return Number(result);
@@ -131,11 +132,11 @@ const fetchCurrentRoundId = async () => {
   }
 };
 
-const getRoundEndTime = async (roundId: number) => {
+const getRoundEndTime = async (contractAddress: string, roundId: number) => {
   try {
     const result = await readContract(wagmiConfig, {
       abi: roomAbi,
-      address: process.env.NEXT_PUBLIC_ROOM_ADDRESS as `0x${string}`,
+      address: getAddress(contractAddress),
       functionName: "getRoundEndTime",
       args: [BigInt(roundId)],
     });
@@ -165,13 +166,14 @@ const formatTime = (seconds: number) => {
 };
 
 const getAgentPosition = async (
+  contractAddress: string,
   roundId: number,
   agentAddress: `0x${string}`
 ) => {
   try {
     const result = await readContract(wagmiConfig, {
       abi: roomAbi,
-      address: process.env.NEXT_PUBLIC_ROOM_ADDRESS as `0x${string}`,
+      address: getAddress(contractAddress),
       functionName: "getAgentPosition",
       args: [BigInt(roundId), agentAddress],
     });
@@ -322,12 +324,12 @@ function AgentsSkeleton() {
 function AgentsDisplay({
   roundAgents,
   isLoadingAgents,
-  roomId,
+  roundIdFromContract,
   roomData,
 }: {
   roundAgents: RoundAgentLookup | undefined;
   isLoadingAgents: boolean;
-  roomId: number;
+  roundIdFromContract: number | null;
   roomData: Tables<"rooms">;
 }) {
   const [agentPositions, setAgentPositions] = useState<{ [key: number]: any }>(
@@ -336,13 +338,15 @@ function AgentsDisplay({
 
   useEffect(() => {
     const fetchAgentPositions = async () => {
-      if (!roundAgents) return;
+      if (!roundAgents || !roomData || !roundIdFromContract) return;
 
+      console.log("roundIdFromContract", roundIdFromContract);
       const positions: { [key: number]: any } = {};
       for (const agent of Object.values(roundAgents)) {
         try {
           const position = await getAgentPosition(
-            roomId,
+            roomData.contract_address || "",
+            roundIdFromContract,
             agent.walletAddress as `0x${string}`
           );
           positions[agent.agentData.id] = position;
@@ -357,7 +361,7 @@ function AgentsDisplay({
     };
 
     fetchAgentPositions();
-  }, [roundAgents, roomId]); // Re-fetch if agents or round changes
+  }, [roundAgents, roundIdFromContract]); // Re-fetch if agents or round changes
 
   console.log("yo0000000000000000000000",agentPositions);
   return (
@@ -605,11 +609,25 @@ export default function RoomDetailPage() {
   // we use a two‑tier approach:
   // 1. A 1‑second interval that decrements the local timer.
   // 2. A 5‑second interval that re‑fetches the round end time from the blockchain.
+  const [roundIdFromContract, setRoundIdFromContract] = useState<number | null>(null);
+
   useEffect(() => {
+    if (!roomData) return;
+
+    const fetchRoundIdFromContract = async () => {
+      const roundIdFromContract = await fetchCurrentRoundId(roomData.contract_address || "");
+
+      console.log("roundIdFromContract", roundIdFromContract);
+      setRoundIdFromContract(roundIdFromContract);
+    };
+    fetchRoundIdFromContract();
+  }, [currentRoundId]);
+
+  useEffect(() => {
+
     const updateTimer = async () => {
-      const roundIdFromContract = await fetchCurrentRoundId();
-      if (!roundIdFromContract) return;
-      const roundEndTimeFetched = await getRoundEndTime(roundIdFromContract);
+      if (!roomData || !roundIdFromContract) return;
+      const roundEndTimeFetched = await getRoundEndTime(roomData.contract_address || "", roundIdFromContract);
       if (!roundEndTimeFetched) return;
       const currentTimestamp = await fetchCurrentBlockTimestamp();
       if (!currentTimestamp) return;
@@ -670,7 +688,7 @@ export default function RoomDetailPage() {
             <AgentsDisplay
               roundAgents={roundAgents}
               isLoadingAgents={isLoadingAgents}
-              roomId={roomId}
+              roundIdFromContract={roundIdFromContract}
               roomData={roomData}
             />
             {/* Agent Chat: shows only agent messages */}

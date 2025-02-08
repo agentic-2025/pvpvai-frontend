@@ -11,6 +11,10 @@ export const BullBearHoldRatioBar: React.FC<BullBearHoldRatioBarProps> = ({
   sell,
   hold,
 }) => {
+  // 0n?
+  buy = Number(buy);
+  sell = Number(sell);
+  hold = Number(hold);
   const total = buy + sell + hold;
   const buyPercentage = total > 0 ? (buy / total) * 100 : 0;
   const sellPercentage = total > 0 ? (sell / total) * 100 : 0;
