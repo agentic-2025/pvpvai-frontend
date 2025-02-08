@@ -189,7 +189,7 @@ export function PvpActionDialog({
 
     const statuses = await publicClient.readContract({
       abi: roomAbi,
-      address: process.env.NEXT_PUBLIC_ROOM_ADDRESS as `0x${string}`,
+      address: getAddress(roomData.contract_address || ""),
       functionName: "getPvpStatuses",
       args: [agentAddress as `0x${string}`],
     });

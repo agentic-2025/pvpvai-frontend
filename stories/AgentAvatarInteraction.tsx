@@ -92,7 +92,8 @@ export function AgentAvatarInteraction({
 
     try {
       const betTypeValue = betTypeMap[selectedBetType];
-      console.log("placing bet", agentAddress, betTypeValue, betAmountNumber);
+      console.log("placing bet", roomData.contract_address, agentAddress, betTypeValue, betAmountNumber);
+
       const { request } = await publicClient.simulateContract({
         abi: roomAbi,
 
@@ -109,7 +110,7 @@ export function AgentAvatarInteraction({
 
       console.log(
         `Calling placeBet on ${getAddress(agentAddress)} (Room: ${getAddress(
-          process.env.NEXT_PUBLIC_ROOM_ADDRESS || ""
+          roomData.contract_address || ""
         )}) with args:`,
         request.args
       );
@@ -244,6 +245,7 @@ export function AgentAvatarInteraction({
 
             {/* Take Action Dialog Trigger */}
             <PvpActionDialog
+              roomData={roomData}
               agentName={name}
               agentImageUrl={imageUrl}
               borderColor={borderColor}
