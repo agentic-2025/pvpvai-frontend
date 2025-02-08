@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { wagmiConfig, walletClient } from "@/components/wrapper/wrapper";
-import { parseEther } from "viem";
+import { parseEther, stringToBytes, stringToHex } from "viem";
 import { useToast } from "@/hooks/use-toast";
 import * as React from "react";
 import { useAccount } from "wagmi";
@@ -44,6 +44,20 @@ interface PvpActionDialogProps {
   agentAddress: string;
 }
 
+interface PvpStatus {
+  endTime: number;
+  instigator: string;
+  parameters: string;
+  verb: string;
+}
+
+const pvpActionFee = {
+  attack: parseEther("0.0001"),
+  poison: parseEther("0.001"),
+  silence: parseEther("0.0002"),
+  deafen: parseEther("0.0002"),
+}
+
 export function PvpActionDialog({
   trigger,
   agentName,
@@ -55,20 +69,22 @@ export function PvpActionDialog({
 
   const [pvpVerb, setPvpVerb] = React.useState<string | null>(null);
   const [pvpInputText, setPvpInputText] = React.useState<string>("");
+  const [pvpStatuses, setPvpStatuses] = React.useState<PvpStatus[]>([]);
   const { toast } = useToast();
 
   const handleInvokePvpAction = async (verb: string, input: string) => {
-    // const parametersHex = Buffer.from(input).toString("hex");
     try {
       const address = agentAddress as `0x${string}`;
+      console.log(stringToBytes(input));
       if (!userAddress) throw new Error("User not connected");
+
       const { request } = await wagmiConfig.simulateContract({
         abi: roomAbi,
         address: process.env.NEXT_PUBLIC_ROOM_ADDRESS as `0x${string}`,
         functionName: "invokePvpAction",
-        args: [address, verb, input],
+        args: [address, verb, stringToHex(input)],
         account: userAddress,
-        value: parseEther("0.0002") as bigint,
+        value: pvpActionFee[verb as keyof typeof pvpActionFee],
       });
       const tx = await  walletClient.writeContract(request);
       console.log(`PVP action "${verb}" invoked:`, tx);
@@ -94,19 +110,41 @@ export function PvpActionDialog({
     }
   };
 
-  // const useEffect(() => {
-  //   const fetchPvpStatuses = async () => {
-  //     if (!publicClient) return;
-  //     const statuses = await publicClient.readContract({
-  //       abi: roomAbi,
-  //       address: roomAddress,
-  //       functionName: "getPvpStatuses",
-  //       args: [agentAddress],
-  //     });
-  //     setCurrentPvpStatuses(statuses);
-  //   };
-  //   fetchPvpStatuses();
-  // }, []);
+  const fetchPvpStatuses = async () => {
+    const statuses = await wagmiConfig.readContract({
+      abi: roomAbi,
+      address: process.env.NEXT_PUBLIC_ROOM_ADDRESS as `0x${string}`,
+      functionName: "getPvpStatuses",
+      args: [agentAddress as `0x${string}`],
+    });
+
+    setPvpStatuses(statuses as PvpStatus[]);
+  };
+
+  const displayTimer = (endTime: number) => {
+    const now = Math.floor(Date.now() / 1000); // Convert JS timestamp to seconds
+    const remainingSeconds = endTime - now;
+
+    if (remainingSeconds <= 0) return "0:00";
+
+    const minutes = Math.floor(remainingSeconds / 60);
+    const seconds = remainingSeconds % 60;
+
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const silence = pvpStatuses.find(status => status.verb === "silence" && status.endTime > nowSeconds);
+  const poison = pvpStatuses.find(status => status.verb === "poison" && status.endTime > nowSeconds);
+  const deafen = pvpStatuses.find(status => status.verb === "deafen" && status.endTime > nowSeconds);
+
+  // refresh each second
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      fetchPvpStatuses();
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <Dialog>
@@ -127,6 +165,8 @@ export function PvpActionDialog({
                     selected={pvpVerb === "attack"}
                     onClick={() => handleActionClick("attack")}
                   />
+                  {/* each pvpStatuses has a endtime, display a timer here that updates every second */}
+                  {/* <p>Timer: {pvpStatuses.endtime}</p> */}
                 </div>
 
                 {/* Silence */}
@@ -136,7 +176,9 @@ export function PvpActionDialog({
                     variant="SILENCE"
                     selected={pvpVerb === "silence"}
                     onClick={() => handleActionClick("silence")}
+                    disabled={silence ? true : false}
                   />
+                  {silence && displayTimer(silence.endTime)}
                 </div>
               </div>
 
@@ -157,7 +199,9 @@ export function PvpActionDialog({
                     variant="DEAFEN"
                     selected={pvpVerb === "deafen"}
                     onClick={() => handleActionClick("deafen")}
+                    disabled={deafen ? true : false}
                   />
+                  {deafen && displayTimer(deafen.endTime)}
                 </div>
 
                 {/* Poison */}
@@ -167,7 +211,9 @@ export function PvpActionDialog({
                     variant="POISON"
                     selected={pvpVerb === "poison"}
                     onClick={() => handleActionClick("poison")}
+                    disabled={poison ? true : false}
                   />
+                  {poison && displayTimer(poison.endTime)}
                 </div>
               </div>
 

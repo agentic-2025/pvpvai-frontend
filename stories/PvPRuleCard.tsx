@@ -113,6 +113,7 @@ const ruleConfigs = {
 interface PvPRuleCardProps {
   variant: PvPRuleVariant;
   selected?: boolean;
+  disabled?: boolean;
   className?: string;
   onClick?: () => void;
 }
@@ -120,6 +121,7 @@ interface PvPRuleCardProps {
 export function PvPRuleCard({
   variant,
   selected = false,
+  disabled = false,
   className,
   onClick,
 }: PvPRuleCardProps) {
@@ -150,12 +152,19 @@ export function PvPRuleCard({
     }
   };
 
+  const getDisabledStyles = (disabled: boolean) => {
+    return disabled
+      ? "opacity-50 cursor-not-allowed"
+      : "opacity-100 cursor-pointer";
+  };
+
   return (
     <div
       className={cn(
         "flex flex-col items-center p-2 rounded-lg border-2 transition-all group w-[180px]",
         "hover:scale-105 hover:shadow-lg hover:shadow-primary/20",
         getImpactStyles(config.impact),
+        getDisabledStyles(disabled),
         className
       )}
       onClick={onClick}
