@@ -23,10 +23,11 @@ import {
 } from "@/lib/backend.types";
 import { roomAbi } from "@/lib/contract.types";
 import * as React from "react";
-import { parseEther, stringToHex } from "viem";
+import { getAddress, parseEther, stringToHex } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { AgentAvatar } from "./AgentAvatar";
 import { PvPRuleCard } from "./PvPRuleCard";
+import { Tables } from "@/lib/database.types";
 
 function validatePvpInput(
   verb: string,
@@ -54,6 +55,7 @@ interface PvpActionDialogProps {
   agentImageUrl?: string;
   borderColor: string;
   agentAddress: string;
+  roomData: Tables<"rooms">;
 }
 
 interface PvpStatus {
@@ -76,6 +78,7 @@ export function PvpActionDialog({
   agentImageUrl,
   borderColor,
   agentAddress,
+  roomData
 }: PvpActionDialogProps) {
   const { address: userAddress } = useAccount();
   const { writeContract } = useWriteContract();
@@ -144,7 +147,7 @@ export function PvpActionDialog({
 
       const { request } = await publicClient.simulateContract({
         abi: roomAbi,
-        address: process.env.NEXT_PUBLIC_ROOM_ADDRESS as `0x${string}`,
+        address: getAddress(roomData.contract_address || ""),
         functionName: "invokePvpAction",
         args: [address, verb, stringToHex(JSON.stringify(parameters))],
         account: userAddress,

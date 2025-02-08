@@ -6,6 +6,7 @@ import Link from "next/link";
 import { FC } from "react";
 import { AgentAvatarInteraction } from "./AgentAvatarInteraction";
 import { BullBearRatioBar } from "./BullBearRatioBar";
+import { Tables } from "@/lib/database.types";
 
 interface BuySellGameAvatarInteractionProps {
   id: number;
@@ -18,7 +19,8 @@ interface BuySellGameAvatarInteractionProps {
   bullAmount: number;
   variant?: "slim" | "full";
   showName?: boolean;
-  address: `0x${string}`;
+  address: string;
+  roomData: Tables<"rooms">;
 }
 
 export const BuySellGameAvatarInteraction: FC<
@@ -35,6 +37,7 @@ export const BuySellGameAvatarInteraction: FC<
   variant = "full",
   showName = true,
   address,
+  roomData
 }) => {
   const total = bearAmount + bullAmount;
   const bearPercentage = total > 0 ? (bearAmount / total) * 100 : 0;
@@ -44,11 +47,12 @@ export const BuySellGameAvatarInteraction: FC<
     <div className="flex flex-col gap-1">
       <div className="flex flex-col items-center gap-2">
         <AgentAvatarInteraction
+          roomData={roomData}
           name={name}
           borderColor={borderColor}
           imageUrl={imageUrl}
           betAmount={betAmount}
-          betType={betType}
+          betType={betType as "buy" | "hold" | "sell" | null}
           bearAmount={bearAmount}
           bullAmount={bullAmount}
           agentAddress={address}
