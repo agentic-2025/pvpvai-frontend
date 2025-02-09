@@ -163,6 +163,7 @@ export function AgentAvatarInteraction({
                       : selectedBetType === "buy"
                       ? "Modify or Cancel Buy Bet"
                       : "Place a Bet"}
+                    {` on`} <span className="border-primary border-b">{name}</span>
                   </DialogTitle>
                   <DialogDescription>
                     <div className="flex flex-col items-center pt-6 gap-y-4">

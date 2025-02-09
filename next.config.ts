@@ -1,8 +1,24 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   images: {
-    domains: ["*"], // Allow images from any URL
+    domains: ["example.com", "another-example.com"], // ✅ Replace with your actual domains
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**", // ✅ Allows all domains dynamically
+      },
+    ],
+  },
+  async headers() {
+    return [
+      {
+        source: "/(.*)", // ✅ Correctly placed inside headers function
+        headers: [
+          { key: "Cross-Origin-Resource-Policy", value: "cross-origin" },
+          { key: "Cross-Origin-Embedder-Policy", value: "credentialless" },
+        ],
+      },
+    ];
   },
 };
 

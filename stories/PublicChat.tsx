@@ -52,7 +52,7 @@ export function PublicChat({
   }, [messages]);
 
   return (
-    <div className={cn("flex flex-col h-full bg-[#313338] w-full", className)}>
+    <div className={cn("flex flex-col h-full bg-[#202123] w-full", className)}>
       <ScrollArea className="flex-1">
         <div className="flex flex-col py-4">
           {loading ? (
