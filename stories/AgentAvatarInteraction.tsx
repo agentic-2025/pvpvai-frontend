@@ -1,5 +1,6 @@
 "use client";
 
+import AnimatedBackground from "@/components/ui/animated-tabs";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,18 +12,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { roomAbi } from "@/lib/contract.types";
+import { Tables } from "@/lib/database.types";
 import { cn } from "@/lib/utils";
-import bearIcon from "@/stories/assets/bear.svg";
-import bullIcon from "@/stories/assets/bull.svg";
-import Image from "next/image";
 import { useState } from "react";
 import { getAddress, parseEther } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { AgentAvatar } from "./AgentAvatar";
 import { PvpActionDialog } from "./PVPActionDialog";
-import { Tabs, TabsList, TabsTrigger } from "@radix-ui/react-tabs";
-import AnimatedBackground from "@/components/ui/animated-tabs";
-import { Tables } from "@/lib/database.types";
 
 interface AgentAvatarInteractionProps {
   name: string;
@@ -47,7 +43,7 @@ export function AgentAvatarInteraction({
   betAmount,
   betType,
   agentAddress,
-  roomData
+  roomData,
 }: AgentAvatarInteractionProps) {
   const publicClient = usePublicClient();
   const { writeContract } = useWriteContract();
@@ -92,7 +88,13 @@ export function AgentAvatarInteraction({
 
     try {
       const betTypeValue = betTypeMap[selectedBetType];
-      console.log("placing bet", roomData.contract_address, agentAddress, betTypeValue, betAmountNumber);
+      console.log(
+        "placing bet",
+        roomData.contract_address,
+        agentAddress,
+        betTypeValue,
+        betAmountNumber
+      );
 
       const { request } = await publicClient.simulateContract({
         abi: roomAbi,
@@ -136,7 +138,7 @@ export function AgentAvatarInteraction({
           name={name}
           borderColor={borderColor}
           imageUrl={imageUrl}
-          variant="md"
+          variant="lg"
           className={cn(
             "transition-opacity",
             selectedBetType ? "opacity-70" : ""
@@ -250,7 +252,6 @@ export function AgentAvatarInteraction({
               agentImageUrl={imageUrl}
               borderColor={borderColor}
               agentAddress={agentAddress}
-              roomData={roomData}
               trigger={
                 <button className="z-20 px-4 py-1  text-gray-200 text-xs font-semibold rounded-full transform translate-x-8 hover:translate-x-6 transition-transform">
                   TAKE ACTION

@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -6,11 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import supabase from "@/lib/config";
+import { SupportedChains } from "@/lib/consts";
 import { Tables } from "@/lib/database.types";
 import { cn, generateRandomColor, getChainMetadata } from "@/lib/utils";
 import { OnchainKitProvider } from "@coinbase/onchainkit";
 import { getTokens } from "@coinbase/onchainkit/api";
 import { Token, TokenImage } from "@coinbase/onchainkit/token";
+import { useEffect, useState } from "react";
 import {
   arbitrum,
   arbitrumSepolia,
@@ -26,11 +27,9 @@ import flowIcon from "./assets/crypto/flow-full-white.svg";
 import solanaIcon from "./assets/crypto/solana-full-color.svg";
 import { ChainButton } from "./ChainButton";
 import { PvPRuleCard } from "./PvPRuleCard";
-import { SupportedChains } from "@/lib/consts";
-import { readContract } from "viem/actions";
 import { coreAbi } from "@/lib/contract.types";
 import { formatEther, getAddress } from "viem";
-import { useAccount, usePublicClient, useContractWrite } from "wagmi";
+import { useAccount, useContractWrite, usePublicClient } from "wagmi";
 
 type PvPRule =
   | "SILENCE"
@@ -209,7 +208,9 @@ export function CreateRoomModal({
   const handleCreateRoom = async () => {
     if (!createRoomFormState.settings) return;
     if (!publicClient) {
-      console.log("No public client found in create room modal handleCreateRoom");
+      console.log(
+        "No public client found in create room modal handleCreateRoom"
+      );
       return;
     }
     const chainMeta = getChainMetadata(chain.id);
@@ -229,7 +230,7 @@ export function CreateRoomModal({
           account: userAddress,
         });
 
-        const depositTx =  writeContract(request);
+        const depositTx = writeContract(request);
         console.log("Deposit successful:", depositTx);
         // transactionHash = depositTx;
       } else {

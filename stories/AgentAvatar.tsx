@@ -69,9 +69,5 @@ export function AgentAvatar({
     return AvatarComponent;
   }
 
-  return (
-    <Link href={`/agents/${id ? id : ""}`}>
-      {AvatarComponent}
-    </Link>
-  );
+  return <Link href={`/agents/${id ? id : ""}`}>{AvatarComponent}</Link>;
 }

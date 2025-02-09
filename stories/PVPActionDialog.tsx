@@ -22,12 +22,13 @@ import {
   PvpSilenceStatusType,
 } from "@/lib/backend.types";
 import { roomAbi } from "@/lib/contract.types";
+import { Tables } from "@/lib/database.types";
+import { blockEndTimeToTimer } from "@/lib/utils";
 import * as React from "react";
 import { getAddress, parseEther, stringToHex } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { AgentAvatar } from "./AgentAvatar";
 import { PvPRuleCard } from "./PvPRuleCard";
-import { Tables } from "@/lib/database.types";
 
 function validatePvpInput(
   verb: string,
@@ -199,18 +200,6 @@ export function PvpActionDialog({
     setPvpStatuses(statuses as PvpStatus[]);
   };
 
-  const displayTimer = (endTime: number) => {
-    const now = Math.floor(Date.now() / 1000); // Convert JS timestamp to seconds
-    const remainingSeconds = endTime - now;
-
-    if (remainingSeconds <= 0) return "0:00";
-
-    const minutes = Math.floor(remainingSeconds / 60);
-    const seconds = remainingSeconds % 60;
-
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-  };
-
   const nowSeconds = Math.floor(Date.now() / 1000);
   const silence = pvpStatuses.find(
     (status) => status.verb === "silence" && status.endTime > nowSeconds
@@ -237,7 +226,7 @@ export function PvpActionDialog({
   return (
     <Dialog>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="max-w-4xl">
+      <DialogContent className="max-w-4xl border-2 border-gray-800">
         <DialogHeader>
           <DialogTitle className="text-center">
             Launch a PvP Action Against{" "}
@@ -267,7 +256,7 @@ export function PvpActionDialog({
                   />
                   {silence && (
                     <span className="block">
-                      {displayTimer(silence.endTime)}
+                      {blockEndTimeToTimer(silence.endTime)}
                     </span>
                   )}
                 </div>
@@ -293,7 +282,7 @@ export function PvpActionDialog({
                         >
                           <span className="capitalize">{effect.verb}</span>
                           <span className="text-sm">
-                            {displayTimer(effect.endTime)}
+                            {blockEndTimeToTimer(effect.endTime)}
                           </span>
                         </li>
                       ))}
@@ -314,7 +303,7 @@ export function PvpActionDialog({
                   />
                   {deafen && (
                     <span className="block">
-                      {displayTimer(deafen.endTime)}
+                      {blockEndTimeToTimer(deafen.endTime)}
                     </span>
                   )}
                 </div>
@@ -330,7 +319,7 @@ export function PvpActionDialog({
                   />
                   {poison && (
                     <span className="block">
-                      {displayTimer(poison.endTime)}
+                      {blockEndTimeToTimer(poison.endTime)}
                     </span>
                   )}
                 </div>
@@ -350,7 +339,7 @@ export function PvpActionDialog({
                             }
                           }}
                           placeholder="Enter 4 to 5 words..."
-                          className="resize-none pr-16"
+                          className="resize-none pr-16 border-gray-400"
                           rows={3}
                         />
                         <div className="absolute bottom-2 right-2 text-sm text-muted-foreground">
@@ -360,9 +349,11 @@ export function PvpActionDialog({
                     )}
 
                     {pvpVerb.toLowerCase() === "poison" && (
-                      <div className="flex items-center gap-4 w-1/2 mb-2">
-                        <div className="flex-1">
-                          <Label htmlFor="find">Find</Label>
+                      <div className="flex items-end justify-center gap-4 w-1/2 mb-2">
+                        <div className="flex-1 flex flex-col">
+                          <Label htmlFor="find" className="mb-2">
+                            Find
+                          </Label>
                           <Input
                             id="find"
                             value={poisonFind}
@@ -372,15 +363,17 @@ export function PvpActionDialog({
                               }
                             }}
                             placeholder="Find word"
-                            className="w-full"
+                            className="w-full border-gray-400"
                           />
-                          <div className="text-xs text-muted-foreground text-right">
+                          <div className="text-xs text-muted-foreground text-right mt-1">
                             {poisonFind.length}/12
                           </div>
                         </div>
 
-                        <div className="flex-1">
-                          <Label htmlFor="replace">Replace</Label>
+                        <div className="flex-1 flex flex-col">
+                          <Label htmlFor="replace" className="mb-2">
+                            Replace
+                          </Label>
                           <Input
                             id="replace"
                             value={poisonReplace}
@@ -390,14 +383,14 @@ export function PvpActionDialog({
                               }
                             }}
                             placeholder="Replace with"
-                            className="w-full"
+                            className="w-full border-gray-400"
                           />
-                          <div className="text-xs text-muted-foreground text-right">
+                          <div className="text-xs text-muted-foreground text-right mt-1">
                             {poisonReplace.length}/12
                           </div>
                         </div>
 
-                        <div className="flex flex-col items-center justify-end h-full">
+                        <div className="flex flex-col items-center justify-end h-[84px]">
                           <Label htmlFor="case-sensitive" className="mb-2">
                             Case Sensitive
                           </Label>
@@ -405,6 +398,7 @@ export function PvpActionDialog({
                             id="case-sensitive"
                             checked={poisonCaseSensitive}
                             onCheckedChange={setPoisonCaseSensitive}
+                            className="mb-6"
                           />
                         </div>
                       </div>
