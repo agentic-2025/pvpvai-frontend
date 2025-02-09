@@ -61,7 +61,7 @@ export const isSupportedInAiChat = (messageType: WsMessageTypes) => {
   SUBSCRIBE ROOM MESSAGES SCHEMA:
   Sent by:
     - WS: Users on room load over WS
-  Received by: 
+  Received by:
     - Single user: subscribeRoomOutputMessageSchema
   Supported by:
     - WS exclusive
@@ -80,7 +80,7 @@ export const subscribeRoomOutputMessageSchema = subscribeRoomInputMessageSchema;
   HEARTBEAT MESSAGES SCHEMA:
   Sent by:
     - WS: Users send this in response to a heartbeat message from the server
-  Received by: 
+  Received by:
     - Single user: heartbeatOutputMessageSchema
   Supported by:
     - WS exclusive
@@ -93,10 +93,10 @@ export const heartbeatInputMessageSchema = z.object({
 
 export const heartbeatOutputMessageSchema = heartbeatInputMessageSchema; //Passthrough
 
-/* 
+/*
   OBSERVATION MESSAGES SCHEMA:
   Sent by: Oracle agents
-  Received by: 
+  Received by:
     - Agents: observationMessageAgentOutputSchema
     - Users (AI Chat): observationMessageAiChatOutputSchema
   Supported by:
@@ -133,9 +133,9 @@ export const observationMessageAiChatOutputSchema =
 
 /*
   PUBLIC CHAT MESSAGES SCHEMA:
-  Sent by: 
+  Sent by:
     - Users
-  Received by: 
+  Received by:
     - Users: publicChatMessageOutputSchema
   Supported by:
     - WS
@@ -155,13 +155,13 @@ export const publicChatMessageInputSchema = z.object({
 });
 export const publicChatMessageOutputSchema = publicChatMessageInputSchema; //Passthrough
 
-/* 
+/*
 --- AGENT MESSAGES SCHEMA ---
-  Sent by: 
+  Sent by:
     - Agents
   Supported by:
     - REST (POST /messages/agentMessage)
-  Received by: 
+  Received by:
     - Agents: agentMessageAgentOutputSchema
     - Users (AI Chat): agentMessageAiChatOutputSchema
   Note: PvP rules applied on message sent to agents, additional details sent to users in AI Chat
@@ -199,9 +199,9 @@ export const agentMessageAiChatOutputSchema = z.object({
 
 /*
   SYSTEM NOTIFICATION SCHEMA:
-  Sent by: 
+  Sent by:
     - Nobody
-  Received by: 
+  Received by:
     - Single User: systemNotificationOutputSchema
     - Single Agent: systemNotificationOutputSchema
   Supported by:
@@ -223,9 +223,9 @@ export const systemNotificationOutputSchema = z.object({
 
 /*
   PARTICIPANTS MESSAGES SCHEMA:
-  Sent by: 
+  Sent by:
     - WS: Users on room load over WS
-  Received by: 
+  Received by:
     - Single user: participantsOutputMessageSchema
     - Users in room: participantsOutputMessageSchema
   Supported by:
@@ -299,7 +299,7 @@ const amnesiaActionSchema = z.object({
   actionType: z.literal(PvpActions.AMNESIA),
   actionCategory: z.literal(PvpActionCategories.DIRECT_ACTION),
   parameters: z.object({
-    target: z.number(),
+    target: z.string(),
   }),
 });
 
@@ -307,7 +307,7 @@ const attackActionSchema = z.object({
   actionType: z.literal(PvpActions.ATTACK),
   actionCategory: z.literal(PvpActionCategories.DIRECT_ACTION),
   parameters: z.object({
-    target: z.number(),
+    target: z.string(),
     message: z.string(),
   }),
 });
@@ -316,7 +316,7 @@ const deceiveStatusSchema = z.object({
   actionType: z.literal(PvpActions.DECEIVE),
   actionCategory: z.literal(PvpActionCategories.STATUS_EFFECT),
   parameters: z.object({
-    target: z.number(),
+    target: z.string(),
     duration: durationOptionsSchema,
     newPersona: z.string(),
   }),
@@ -326,7 +326,7 @@ const blindStatusSchema = z.object({
   actionType: z.literal(PvpActions.BLIND),
   actionCategory: z.literal(PvpActionCategories.STATUS_EFFECT),
   parameters: z.object({
-    target: z.number(),
+    target: z.string(),
     duration: durationOptionsSchema,
   }),
 });
@@ -335,7 +335,7 @@ const silenceStatusSchema = z.object({
   actionType: z.literal(PvpActions.SILENCE),
   actionCategory: z.literal(PvpActionCategories.STATUS_EFFECT),
   parameters: z.object({
-    target: z.number(),
+    target: z.string(),
     duration: durationOptionsSchema,
   }),
 });
@@ -344,7 +344,7 @@ const deafenStatusSchema = z.object({
   actionType: z.literal(PvpActions.DEAFEN),
   actionCategory: z.literal(PvpActionCategories.STATUS_EFFECT),
   parameters: z.object({
-    target: z.number(),
+    target: z.string(),
     duration: durationOptionsSchema,
   }),
 });
@@ -353,7 +353,7 @@ const poisonStatusSchema = z.object({
   actionType: z.literal(PvpActions.POISON),
   actionCategory: z.literal(PvpActionCategories.STATUS_EFFECT),
   parameters: z.object({
-    target: z.number(),
+    target: z.string(),
     duration: durationOptionsSchema,
     find: z.string(),
     replace: z.string(),
