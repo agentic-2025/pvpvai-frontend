@@ -84,10 +84,10 @@ const useRoundAgents = (roundId: number) => {
         .from("round_agents")
         .select(
           `
-            *,
-            agents(*),
-            rounds(rooms(room_agents(agent_id, wallet_address)))
-          `
+              *,
+              agents(*),
+              rounds(rooms(room_agents(agent_id, wallet_address)))
+            `
         )
         .eq("round_id", roundId);
       if (error) {
@@ -740,8 +740,27 @@ export default function RoomDetailPage() {
                 currentUserAddress={String(currentUserId)}
                 loading={isLoadingPublicChatMessages}
                 onSendMessage={(message) => {
-                  // Optionally: implement sending message logic here.
-                  console.log("User sending message:", message);
+                  if (readyState === WebSocket.OPEN) {
+                    const messagePayload = {
+                      messageType: WsMessageTypes.PUBLIC_CHAT,
+                      author: currentUserId,
+                      timeStamp: Date.now(),
+                      content: { text: message, roomId },
+                    };
+
+                    sendMessage(JSON.stringify(messagePayload));
+                    console.log("Message sent:", messagePayload);
+                  } else {
+                    console.error(
+                      "WebSocket is not open. Cannot send message."
+                    );
+                    toast({
+                      variant: "destructive",
+                      title: "Error",
+                      description:
+                        "Unable to send message. WebSocket is not connected.",
+                    });
+                  }
                 }}
               />
             </div>
