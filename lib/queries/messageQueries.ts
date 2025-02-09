@@ -1,4 +1,5 @@
 import {
+  agentDecisionAiChatOutputSchema,
   agentMessageAiChatOutputSchema,
   AllAiChatMessageSchemaTypes,
   gmMessageAiChatOutputSchema,
@@ -38,6 +39,9 @@ const parseAgentMessage = (
         return observationMessageAiChatOutputSchema.parse(parsedMessage);
       case WsMessageTypes.PVP_ACTION_ENACTED:
         return pvpActionEnactedAiChatOutputSchema.parse(parsedMessage);
+      case WsMessageTypes.AGENT_DECISION:
+        console.log("Agent decision", parsedMessage);
+        return agentDecisionAiChatOutputSchema.parse(parsedMessage);
       default:
         console.log(
           "Error, unsupported message type, will exclude message from display:",
@@ -88,6 +92,7 @@ export const useRoundAgentMessages = (
           WsMessageTypes.OBSERVATION,
           WsMessageTypes.PVP_ACTION_ENACTED,
           WsMessageTypes.PVP_STATUS_REMOVED,
+          WsMessageTypes.AGENT_DECISION,
         ])
         .order("created_at", { ascending: false })
         .limit(100); //TODO, implement infinite scroll or pagination later

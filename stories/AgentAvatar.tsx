@@ -56,7 +56,9 @@ export function AgentAvatar({
       className={cn(styles.size, styles.border, "relative", className)}
       style={{ borderColor }}
     >
-      {imageUrl && <AvatarImage src={imageUrl} alt={name} />}
+      {imageUrl && (
+        <AvatarImage src={imageUrl} alt={name} className="object-cover" />
+      )}
       <AvatarFallback
         className={cn(styles.text, "rounded-full text-white bg-gray-700")}
       >

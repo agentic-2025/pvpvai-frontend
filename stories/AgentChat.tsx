@@ -2,6 +2,7 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  agentDecisionAiChatOutputSchema,
   agentMessageAiChatOutputSchema,
   AllAiChatMessageSchemaTypes,
   gmMessageAiChatOutputSchema,
@@ -12,11 +13,11 @@ import {
 } from "@/lib/backend.types";
 import { cn } from "@/lib/utils";
 import { useLayoutEffect, useRef } from "react";
+import { AgentDecisionChatLine } from "./AgentDecisionChatLine";
 import { AgentMessageChatLine } from "./AgentMessageChatLine";
 import { GMChatLine } from "./GMChatLine";
 import { ObservationChatLine } from "./ObservationChatLine";
 import { PvPActionChatLine } from "./PvPActionChatLine";
-
 
 interface AgentChatProps {
   messages: AllAiChatMessageSchemaTypes[];
@@ -100,6 +101,16 @@ export function AgentChat({
                   case WsMessageTypes.GM_MESSAGE:
                     const gmMessage = gmMessageAiChatOutputSchema.parse(msg);
                     return <GMChatLine key={index} message={gmMessage} />;
+                  case WsMessageTypes.AGENT_DECISION:
+                    const agentDecisionMessage =
+                      agentDecisionAiChatOutputSchema.parse(msg);
+                    return (
+                      <AgentDecisionChatLine
+                        key={index}
+                        agent_id={agentDecisionMessage.content.agentId}
+                        decision={agentDecisionMessage.content.decision}
+                      />
+                    );
                   case WsMessageTypes.AGENT_MESSAGE:
                     const agentMessage =
                       agentMessageAiChatOutputSchema.parse(msg);

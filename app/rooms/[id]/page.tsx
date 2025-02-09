@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { wagmiConfig } from "@/components/wrapper/wrapper";
 import { useToast } from "@/hooks/use-toast";
 import {
+  agentDecisionAiChatOutputSchema,
   agentMessageAiChatOutputSchema,
   AllAiChatMessageSchemaTypes,
   AllOutputSchemaTypes,
@@ -549,6 +550,13 @@ export default function RoomDetailPage() {
             setAiChatMessages((prev) => [...prev, data]);
             break;
 
+          case WsMessageTypes.AGENT_DECISION:
+            console.log("Agent decision received:", data);
+            const parsedAgentDecisionData =
+              agentDecisionAiChatOutputSchema.safeParse(data);
+            console.log("Parsed data agent decision:", parsedAgentDecisionData);
+            setAiChatMessages((prev) => [...prev, data]);
+            break;
           case WsMessageTypes.HEARTBEAT:
             sendMessage(
               JSON.stringify({

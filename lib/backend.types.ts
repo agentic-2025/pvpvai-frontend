@@ -45,6 +45,12 @@ export enum WsMessageTypes {
   // Recipients: Users
   // Purpose: Informs users that a PvP status has been removed from an agent
   PVP_STATUS_REMOVED = "pvp_status_removed",
+
+  // Response to: None (background process monitors when a PvP status is removed and notifies users)
+  // Recipients: Users
+  // Purpose: Informs users that a PvP status has been removed from an agent
+  AGENT_DECISION = "agent_decision",
+  AGENT_NUDGE = "agent_nudge",
 }
 
 export const isSupportedInAiChat = (messageType: WsMessageTypes) => {
@@ -53,7 +59,8 @@ export const isSupportedInAiChat = (messageType: WsMessageTypes) => {
     messageType === WsMessageTypes.OBSERVATION ||
     messageType === WsMessageTypes.GM_MESSAGE ||
     messageType === WsMessageTypes.PVP_ACTION_ENACTED ||
-    messageType === WsMessageTypes.PVP_STATUS_REMOVED
+    messageType === WsMessageTypes.PVP_STATUS_REMOVED ||
+    messageType === WsMessageTypes.AGENT_DECISION
   );
 };
 
@@ -422,7 +429,8 @@ export type AllOutputSchemaTypes =
   | z.infer<typeof gmMessageAiChatOutputSchema>
   | z.infer<typeof observationMessageAiChatOutputSchema>
   | z.infer<typeof heartbeatOutputMessageSchema>
-  | z.infer<typeof subscribeRoomOutputMessageSchema>;
+  | z.infer<typeof subscribeRoomOutputMessageSchema>
+  | z.infer<typeof agentDecisionAiChatOutputSchema>;
 
 // All types of messages that the backend can receive
 export type AllInputSchemaTypes =
@@ -443,6 +451,26 @@ export type AllAiChatMessageSchemaTypes =
   | z.infer<typeof observationMessageAiChatOutputSchema>
   | z.infer<typeof agentMessageAiChatOutputSchema>
   | z.infer<typeof gmMessageAiChatOutputSchema>
-  | z.infer<typeof pvpActionEnactedAiChatOutputSchema>;
+  | z.infer<typeof pvpActionEnactedAiChatOutputSchema>
+  | z.infer<typeof agentDecisionAiChatOutputSchema>;
 // | z.infer<typeof aiChatPvpStatusRemovedOutputSchema>;
 //TODO PVP and GM message types will go here;
+
+enum DecisionType {
+  BUY = 1,
+  SELL = 2,
+  HOLD = 3,
+}
+
+export const agentDecisionAiChatOutputSchema = z.object({
+  messageType: z.literal(WsMessageTypes.AGENT_DECISION),
+  signature: z.string(),
+  sender: z.string(),
+  content: z.object({
+    timestamp: z.number(),
+    roomId: z.number(),
+    roundId: z.number(),
+    agentId: z.number(),
+    decision: z.nativeEnum(DecisionType),
+  }),
+});
