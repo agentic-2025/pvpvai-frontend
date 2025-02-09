@@ -2,6 +2,7 @@
 
 import Loader from "@/components/loader";
 import { Skeleton } from "@/components/ui/skeleton";
+import { wagmiConfig } from "@/components/wrapper/wrapper";
 import { useToast } from "@/hooks/use-toast";
 import {
   agentMessageAiChatOutputSchema,
@@ -16,6 +17,7 @@ import {
   WsMessageTypes,
 } from "@/lib/backend.types";
 import supabase from "@/lib/config";
+import { roomAbi } from "@/lib/contract.types";
 import { Tables } from "@/lib/database.types";
 import {
   useRoundAgentMessages,
@@ -29,11 +31,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import useWebSocket from "react-use-websocket";
+import { getAddress, PublicClient } from "viem";
+import { readContract } from "viem/actions";
+import { usePublicClient } from "wagmi";
 import { z } from "zod";
-import { roomAbi } from "@/lib/contract.types";
-import { getBlock, readContract } from "viem/actions";
-import { wagmiConfig } from "@/components/wrapper/wrapper";
-import { getAddress } from "viem";
 
 // --- Query Hooks ---
 const useRoomDetails = (roomId: number) => {
@@ -120,19 +121,20 @@ const useRoundAgents = (roundId: number) => {
 
 const fetchCurrentRoundId = async (contractAddress: string) => {
   try {
+    console.log("Fetching current contract round ID");
     const result = await readContract(wagmiConfig, {
       abi: roomAbi,
       address: getAddress(contractAddress),
       functionName: "currentRoundId",
     });
-    return Number(result);
+    return result;
   } catch (error) {
     console.error("Error fetching current round ID:", error);
     return null;
   }
 };
 
-const getRoundEndTime = async (contractAddress: string, roundId: number) => {
+const getRoundEndTime = async (contractAddress: string, roundId: bigint) => {
   try {
     const result = await readContract(wagmiConfig, {
       abi: roomAbi,
@@ -147,9 +149,9 @@ const getRoundEndTime = async (contractAddress: string, roundId: number) => {
   }
 };
 
-const fetchCurrentBlockTimestamp = async () => {
+const fetchCurrentBlockTimestamp = async (publicClient: PublicClient) => {
   try {
-    const block = await getBlock(wagmiConfig);
+    const block = await publicClient.getBlock();
     return Math.floor(Number(block.timestamp)); // Ensure seconds, not milliseconds
   } catch (error) {
     console.error("Error fetching current block timestamp:", error);
@@ -167,7 +169,7 @@ const formatTime = (seconds: number) => {
 
 const getAgentPosition = async (
   contractAddress: string,
-  roundId: number,
+  roundId: bigint,
   agentAddress: `0x${string}`
 ) => {
   try {
@@ -329,7 +331,7 @@ function AgentsDisplay({
 }: {
   roundAgents: RoundAgentLookup | undefined;
   isLoadingAgents: boolean;
-  roundIdFromContract: number | null;
+  roundIdFromContract: bigint | null;
   roomData: Tables<"rooms">;
 }) {
   const [agentPositions, setAgentPositions] = useState<{ [key: number]: any }>(
@@ -407,11 +409,11 @@ export default function RoomDetailPage() {
   const params = useParams<{ id: string }>();
   const roomId = parseInt(params.id);
   const currentUserId = 1; // TODO: Do not hardcode me
+  const publicClient = usePublicClient();
 
   // Timer states
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [formattedTime, setFormattedTime] = useState<string>("--:--:--");
-
   // Separate states for public chat and agent messages
   const [messages, setMessages] = useState<
     z.infer<typeof publicChatMessageInputSchema>[]
@@ -441,15 +443,6 @@ export default function RoomDetailPage() {
     useRoundAgents(currentRoundId);
   // const { data: gameMaster, isLoading: isLoadingGM } =
   //   useRoundGameMaster(currentRoundId);
-
-  // // Loading state
-  // const roomQueriesLoading =
-  //   isLoadingRoom ||
-  //   isLoadingRounds ||
-  //   isLoadingRoundAgentMessages ||
-  //   // isLoadingRoundUserMessages ||
-  //   isLoadingAgents ||
-  //   isLoadingGM;
 
   // --- WebSocket Logic ---
   const socketUrl = `${process.env.NEXT_PUBLIC_BACKEND_WS_URL}`;
@@ -612,7 +605,7 @@ export default function RoomDetailPage() {
   // we use a two‑tier approach:
   // 1. A 1‑second interval that decrements the local timer.
   // 2. A 5‑second interval that re‑fetches the round end time from the blockchain.
-  const [roundIdFromContract, setRoundIdFromContract] = useState<number | null>(
+  const [roundIdFromContract, setRoundIdFromContract] = useState<bigint | null>(
     null
   );
 
@@ -628,9 +621,13 @@ export default function RoomDetailPage() {
       setRoundIdFromContract(roundIdFromContract);
     };
     fetchRoundIdFromContract();
-  }, [currentRoundId]);
+  }, [currentRoundId, roomData]);
 
   useEffect(() => {
+    if (!publicClient) {
+      console.error("No public client found");
+      return;
+    }
     const updateTimer = async () => {
       if (!roomData || !roundIdFromContract) return;
       const roundEndTimeFetched = await getRoundEndTime(
@@ -638,15 +635,18 @@ export default function RoomDetailPage() {
         roundIdFromContract
       );
       if (!roundEndTimeFetched) return;
-      const currentTimestamp = await fetchCurrentBlockTimestamp();
+      console.log("Round End Time:", roundEndTimeFetched);
+
+      const currentTimestamp = await fetchCurrentBlockTimestamp(publicClient);
       if (!currentTimestamp) return;
 
+      console.log("Contract Round ID:", roundIdFromContract);
       console.log("Round End Time:", roundEndTimeFetched);
       console.log("Current Timestamp:", currentTimestamp);
+      console.log("Date.now()", Date.now());
 
       const baseRemainingTime = roundEndTimeFetched - currentTimestamp;
       setTimeLeft(baseRemainingTime > 0 ? baseRemainingTime : 0);
-      console.log("Time updated: ", baseRemainingTime);
     };
 
     // Initial fetch
@@ -668,7 +668,7 @@ export default function RoomDetailPage() {
       clearInterval(countdownInterval);
       clearInterval(refreshInterval);
     };
-  }, []);
+  }, [currentRoundIndex, publicClient, roomData, roundIdFromContract]); // Only re-run when currentRoundIndex changes
 
   useEffect(() => {
     if (timeLeft !== null) {
@@ -689,9 +689,9 @@ export default function RoomDetailPage() {
       </div>
     );
   return (
-    <div className="flex items-center justify-center h-screen w-full">
+    <div className="flex items-center justify-center w-full">
       <div className="max-w-screen-2xl w-full mx-auto p-4 bg-secondary/50 rounded-xl">
-        <div className="w-full flex gap-6 h-[calc(100vh-4rem)]">
+        <div className="w-full flex gap-6 h-[calc(100vh-10rem)]">
           {/* Left Section: Room Info, Agents, and Agent Chat */}
           <div className="w-[65%] flex flex-col gap-6">
             <AgentsDisplay
@@ -717,7 +717,7 @@ export default function RoomDetailPage() {
               roomData={roomData}
               roundList={roundList}
               currentRoundIndex={currentRoundIndex}
-              timeLeft={formattedTime} // <-- Formatted string (e.g., "04:32")
+              timeLeft={timeLeft?.toLocaleString() || "00:00"} // <-- Formatted string (e.g., "04:32")
               isLoadingRoom={isLoadingRoom}
               isLoadingRounds={isLoadingRounds}
               setCurrentRoundIndex={setCurrentRoundIndex}

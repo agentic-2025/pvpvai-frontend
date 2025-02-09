@@ -14,8 +14,8 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export type PartialExcept<T, K extends keyof T> = Partial<Omit<T, K>> & Pick<T, K>;
-
+export type PartialExcept<T, K extends keyof T> = Partial<Omit<T, K>> &
+  Pick<T, K>;
 
 function getTimerColor(secondsLeft: number): string {
   const minutes = secondsLeft / 60;
@@ -150,4 +150,21 @@ export function generateRandomColor(isLight: boolean) {
   };
 
   return hslToHex(hue, saturation, lightness);
+}
+
+/**
+ * Converts a block end time (in seconds) to a MM:SS format timer string
+ * @param endTime - Unix timestamp in seconds
+ * @returns Formatted timer string (e.g. "2:45")
+ */
+export function blockEndTimeToTimer(endTime: number): string {
+  const now = Math.floor(Date.now() / 1000); // Convert JS timestamp to seconds
+  const remainingSeconds = endTime - now;
+
+  if (remainingSeconds <= 0) return "0:00";
+
+  const minutes = Math.floor(remainingSeconds / 60);
+  const seconds = remainingSeconds % 60;
+
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
