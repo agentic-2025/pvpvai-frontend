@@ -743,9 +743,15 @@ export default function RoomDetailPage() {
                   if (readyState === WebSocket.OPEN) {
                     const messagePayload = {
                       messageType: WsMessageTypes.PUBLIC_CHAT,
-                      author: currentUserId,
-                      timeStamp: Date.now(),
-                      content: { text: message, roomId },
+                      sender: currentUserId.toString(),
+                      signature: "signature",
+                      content: {
+                        text: message,
+                        userId: currentUserId,
+                        roundId: currentRoundId,
+                        roomId: roomId,
+                        timestamp: Date.now()
+                      },
                     };
 
                     sendMessage(JSON.stringify(messagePayload));
