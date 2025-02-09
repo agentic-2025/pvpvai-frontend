@@ -238,8 +238,8 @@ function RoundDetailsAndNavigation({
   const displayRoundNumber = roundList.length - currentRoundIndex;
 
   return (
-    <div className="min-h-[20%] overflow-y-auto scroll-thin">
-      <div className="bg-card rounded-lg p-4 flex flex-col items-center justify-center gap-y-4">
+    <div className="min-h-[20%] overflow-y-auto scroll-thin bg-card p-3">
+      <div className="bg-[#202123] rounded-lgpy-2 flex flex-col items-center justify-center gap-y-4">
         <h2
           className="text-2xl font-bold truncate text-center"
           style={{ color: roomData.color || "inherit" }}
@@ -368,8 +368,8 @@ function AgentsDisplay({
   }, [roundAgents, roundIdFromContract, roomData]);
 
   return (
-    <div className="w-full h-[60%] bg-[#1c1917] rounded-lg p-3">
-      <div className="bg-[#262626] flex items-center justify-center w-full h-full rounded-md">
+    <div className="w-full h-[60%] bg-card rounded-lg p-3">
+      <div className="bg-[#202123] flex items-center justify-center w-full h-full rounded-md">
         {isLoadingAgents ? (
           <AgentsSkeleton />
         ) : (
@@ -703,7 +703,7 @@ export default function RoomDetailPage() {
             {/* Agent Chat: shows only agent messages */}
             <div className="flex-1 bg-card rounded-lg overflow-hidden w-full">
               <AgentChat
-                className="h-full min-w-full"
+                className="h-full min-w-full bg-[#202123] p-3"
                 showHeader={false}
                 messages={[...(roundAgentMessages || []), ...aiChatMessages]}
                 loading={isLoadingRoundAgentMessages}
@@ -725,7 +725,7 @@ export default function RoomDetailPage() {
               participants={participants}
             />
             {/* Public Chat (currently commented out) */}
-            <div className="flex flex-col bg-card rounded-lg p-4 overflow-y-auto h-full">
+            <div className="flex flex-col bg-card rounded-lg p-3 overflow-y-auto h-full">
               <PublicChat
                 messages={[...(roundPublicChatMessages || []), ...messages]}
                 className="h-full"

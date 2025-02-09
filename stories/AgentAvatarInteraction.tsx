@@ -20,7 +20,6 @@ import { getAddress, parseEther } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { AgentAvatar } from "./AgentAvatar";
 import { PvpActionDialog } from "./PVPActionDialog";
-import { Tabs, TabsList, TabsTrigger } from "@radix-ui/react-tabs";
 import AnimatedBackground from "@/components/ui/animated-tabs";
 import { Tables } from "@/lib/database.types";
 
@@ -47,7 +46,7 @@ export function AgentAvatarInteraction({
   betAmount,
   betType,
   agentAddress,
-  roomData
+  roomData,
 }: AgentAvatarInteractionProps) {
   const publicClient = usePublicClient();
   const { writeContract } = useWriteContract();
@@ -92,7 +91,13 @@ export function AgentAvatarInteraction({
 
     try {
       const betTypeValue = betTypeMap[selectedBetType];
-      console.log("placing bet", roomData.contract_address, agentAddress, betTypeValue, betAmountNumber);
+      console.log(
+        "placing bet",
+        roomData.contract_address,
+        agentAddress,
+        betTypeValue,
+        betAmountNumber
+      );
 
       const { request } = await publicClient.simulateContract({
         abi: roomAbi,
@@ -161,6 +166,7 @@ export function AgentAvatarInteraction({
                       : selectedBetType === "buy"
                       ? "Modify or Cancel Buy Bet"
                       : "Place a Bet"}
+                    {` on`} <span className="border-primary border-b">{name}</span>
                   </DialogTitle>
                   <DialogDescription>
                     <div className="flex flex-col items-center pt-6 gap-y-4">

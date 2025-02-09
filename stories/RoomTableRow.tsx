@@ -67,7 +67,7 @@ export function RoomTableRow({
       {showToken ? (
         <TableCell>
           <div className="flex items-center gap-2">
-            <Image
+            <img
               src={(room.room_config as any)?.room_config?.buySellTokenImage}
               alt={(room.room_config as any)?.room_config?.buySellTokenSymbol}
               className="size-6"
