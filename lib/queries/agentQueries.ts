@@ -7,7 +7,7 @@ const supabase = createClientComponentClient<Database>();
 /**
  * Hook to fetch a single agent by ID
  */
-export function useAgentQuery(agentId: number) {
+export function useAgentQuery(agentId: number | string) {
   return useQuery({
     queryKey: ["agent", agentId],
     queryFn: () => fetchAgent(agentId),
@@ -15,15 +15,22 @@ export function useAgentQuery(agentId: number) {
   });
 }
 
-async function fetchAgent(agentId: number) {
-  const { data, error } = await supabase
-    .from("agents")
-    .select("*")
-    .eq("id", agentId)
-    .single();
+async function fetchAgent(agentId: number | string) {
+  let query = supabase.from("agents").select("*");
+
+  if (typeof agentId === "number") {
+    query = query.eq("id", agentId);
+  } else {
+    // If it's a string, check both wallet addresses
+    query = query.or(
+      `eth_wallet_address.eq.${agentId},sol_wallet_address.eq.${agentId}`
+    );
+  }
+
+  const { data, error } = await query.single();
 
   if (error) {
-    console.error("Error fetching agent", error);
+    console.error("Error fetching agent:", error);
     throw error;
   }
 

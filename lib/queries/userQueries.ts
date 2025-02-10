@@ -13,6 +13,9 @@ async function getUser(userId: number) {
     .single();
 
   if (error) {
+    if (error.code === "PGRST116") {
+      return null;
+    }
     throw error;
   }
 

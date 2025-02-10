@@ -41,7 +41,9 @@ export function AgentDecisionChatLine({
 
   if (!agent) return null;
 
-  const decisionDetails = decisionConfig[decision as keyof typeof decisionConfig] || {
+  const decisionDetails = decisionConfig[
+    decision as keyof typeof decisionConfig
+  ] || {
     text: "unknown",
     color: "#6B7280", // gray-500
     darkColor: "#374151", // gray-700
@@ -61,10 +63,7 @@ export function AgentDecisionChatLine({
         />
       </div>
       <div
-        className={cn(
-          "flex-1 min-w-0 rounded px-3 py-1 relative",
-          className
-        )}
+        className={cn("flex-1 min-w-0 rounded px-3 py-1 relative", className)}
         style={{
           backgroundColor: `${decisionDetails.color}20`,
           border: `2px solid ${decisionDetails.color}45`,

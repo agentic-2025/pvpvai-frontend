@@ -156,7 +156,6 @@ export const publicChatMessageInputSchema = z.object({
     timestamp: z.number(),
     roomId: z.number(),
     roundId: z.number(),
-    userId: z.number(),
     text: z.string(),
   }),
 });

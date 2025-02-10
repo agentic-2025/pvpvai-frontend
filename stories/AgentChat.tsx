@@ -36,7 +36,6 @@ export function AgentChat({
 }: AgentChatProps) {
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
 
-  console.log("🚀 ~ messages:", messages);
   // Scroll to the bottom when agent messages update.
   useLayoutEffect(() => {
     endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -85,9 +84,6 @@ export function AgentChat({
             {messages
               .filter((msg) => {
                 if (!isSupportedInAiChat(msg.messageType)) {
-                  console.log("msg", msg);
-                  console.log("msg.messageType", msg.messageType);
-                  console.log("msg.messageType", msg["messageType"]);
                   console.log(
                     "Encountered unsupported message type, skipping: ",
                     msg.messageType

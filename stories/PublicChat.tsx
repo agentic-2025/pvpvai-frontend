@@ -25,7 +25,6 @@ export function PublicChat({
   variant = "default",
   loading = false,
 }: PublicChatProps) {
-  console.log("messages", messages);
   const [inputValue, setInputValue] = useState("");
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
 
@@ -64,7 +63,6 @@ export function PublicChat({
               {messages.map((msg, index) => (
                 <PublicChatLine
                   key={index}
-                  id={msg.content.userId}
                   // TODO below is technically the wrong field, should be the user id, but I'm exhausted
                   address={String(msg.sender)}
                   avatarUrl={""}

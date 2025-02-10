@@ -51,7 +51,7 @@ const parseAgentMessage = (
       // throw new Error(`Unsupported message type: ${parsedMessage}`);
     }
   } catch (error) {
-    console.error("Error parsing message", JSON.stringify(error));
+    console.error("Error parsing message", error, message);
     throw error;
   }
 };

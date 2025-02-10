@@ -59,7 +59,6 @@ function ChatLineSkeleton({
 }
 
 export function PublicChatLine({
-  id,
   address,
   avatarUrl,
   message,
@@ -68,15 +67,10 @@ export function PublicChatLine({
   variant = "default",
 }: PublicChatLineProps) {
   const isCompact = variant === "compact";
-  const { data: user, isLoading } = useUserQuery(id);
 
-  // Show skeleton while loading
-  if (isLoading) {
-    return <ChatLineSkeleton variant={variant} />;
-  }
 
   // Use the fallback address if user data isn't available
-  const displayAddress = user?.address || address;
+  const displayAddress =  address;
   const displayAvatarUrl = avatarUrl;
 
   if (isCompact) {
