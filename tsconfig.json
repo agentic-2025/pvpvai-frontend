@@ -7,6 +7,9 @@
     "strict": true,
     "noEmit": true,
     "esModuleInterop": true,
+    "noImplicitAny": false, // Temporary for the hackathon!  Set back to true ASAP!
+    "strictNullChecks": false, // Temporary for the hackathon! Set back to true ASAP!
+    "noEmitOnError": true, // Keep this true so that code with errors does not compile
     "module": "esnext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,

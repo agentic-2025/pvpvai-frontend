@@ -33,7 +33,6 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import useWebSocket from "react-use-websocket";
 import { getAddress, PublicClient } from "viem";
-import { readContract } from "viem/actions";
 import { usePublicClient } from "wagmi";
 import { z } from "zod";
 
@@ -120,14 +119,16 @@ const useRoundAgents = (roundId: number) => {
   });
 };
 
-const fetchCurrentRoundId = async (contractAddress: string) => {
+const fetchCurrentRoundId = async (contractAddress: string, publicClient: PublicClient) => {
   try {
     console.log("Fetching current contract round ID");
-    const result = await readContract(wagmiConfig, {
+    const result = await publicClient.readContract({
       abi: roomAbi,
       address: getAddress(contractAddress),
       functionName: "currentRoundId",
     });
+
+    console.log("Current round ID:", result);
     return result;
   } catch (error) {
     console.error("Error fetching current round ID:", error);
@@ -135,9 +136,9 @@ const fetchCurrentRoundId = async (contractAddress: string) => {
   }
 };
 
-const getRoundEndTime = async (contractAddress: string, roundId: bigint) => {
+const getRoundEndTime = async (contractAddress: string, roundId: bigint, publicClient: PublicClient) => {
   try {
-    const result = await readContract(wagmiConfig, {
+    const result = await publicClient.readContract({
       abi: roomAbi,
       address: getAddress(contractAddress),
       functionName: "getRoundEndTime",
@@ -171,10 +172,11 @@ const formatTime = (seconds: number) => {
 const getAgentPosition = async (
   contractAddress: string,
   roundId: bigint,
-  agentAddress: `0x${string}`
+  agentAddress: `0x${string}`,
+  publicClient: PublicClient
 ) => {
   try {
-    const result = await readContract(wagmiConfig, {
+    const result = await publicClient.readContract({
       abi: roomAbi,
       address: getAddress(contractAddress),
       functionName: "getAgentPosition",
@@ -338,10 +340,11 @@ function AgentsDisplay({
   const [agentPositions, setAgentPositions] = useState<{ [key: number]: any }>(
     {}
   );
+  const publicClient = usePublicClient();
 
   useEffect(() => {
     const fetchAgentPositions = async () => {
-      if (!roundAgents || !roomData || !roundIdFromContract) return;
+      if (!roundAgents || !roomData || !roundIdFromContract || !publicClient) return;
 
       console.log("roundIdFromContract", roundIdFromContract);
       const positions: { [key: number]: any } = {};
@@ -350,7 +353,8 @@ function AgentsDisplay({
           const position = await getAgentPosition(
             roomData.contract_address || "",
             roundIdFromContract,
-            agent.walletAddress as `0x${string}`
+            agent.walletAddress as `0x${string}`,
+            publicClient
           );
           positions[agent.agentData.id] = position;
         } catch (error) {
@@ -368,7 +372,7 @@ function AgentsDisplay({
     const interval = setInterval(fetchAgentPositions, 4000);
 
     return () => clearInterval(interval);
-  }, [roundAgents, roundIdFromContract, roomData]);
+  }, [roundAgents, roundIdFromContract, roomData, publicClient]);
 
   return (
     <div className="w-full h-[60%] bg-card rounded-lg p-3">
@@ -618,18 +622,19 @@ export default function RoomDetailPage() {
   );
 
   useEffect(() => {
-    if (!roomData) return;
+    if (!roomData || !publicClient) return;
 
     const fetchRoundIdFromContract = async () => {
       const roundIdFromContract = await fetchCurrentRoundId(
-        roomData.contract_address || ""
+        roomData.contract_address || "",
+        publicClient
       );
 
       console.log("roundIdFromContract", roundIdFromContract);
       setRoundIdFromContract(roundIdFromContract);
     };
     fetchRoundIdFromContract();
-  }, [currentRoundId, roomData]);
+  }, [currentRoundId, roomData, publicClient]);
 
   useEffect(() => {
     if (!publicClient) {
@@ -640,7 +645,8 @@ export default function RoomDetailPage() {
       if (!roomData || !roundIdFromContract) return;
       const roundEndTimeFetched = await getRoundEndTime(
         roomData.contract_address || "",
-        roundIdFromContract
+        roundIdFromContract,
+        publicClient
       );
       if (!roundEndTimeFetched) return;
       console.log("Round End Time:", roundEndTimeFetched);

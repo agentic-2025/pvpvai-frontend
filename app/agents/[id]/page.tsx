@@ -21,7 +21,7 @@ import {
 import { Database } from "@/lib/database.types";
 import Image from "next/image";
 import { chainMetadata } from "@/lib/utils";
-import { roomTypeMapping } from "@/stories/RoomTable";
+import { roomTypeMapping } from "@/lib/room-types";
 
 export type Room = Database["public"]["Tables"]["rooms"]["Row"];
 export type Agent = Database["public"]["Tables"]["agents"]["Row"];
@@ -56,7 +56,12 @@ export default function AgentSummary() {
           type,
           earnings,
           character_card,
-          last_health_check
+          last_health_check,
+          created_at,
+          creator_id,
+          eth_wallet_address,
+          sol_wallet_address,
+          updated_at
         `
         )
         .eq("id", Number(id))
@@ -213,6 +218,7 @@ export default function AgentSummary() {
               </Label>
               <div className="scroll-thin bg-muted/80 p-4 rounded-md text-sm max-w-full max-h-96 overflow-auto text-white mt-2 relative">
                 <button
+                title="Copy JSON"
                   className="absolute top-0 right-0 m-4"
                   onClick={() =>
                     navigator.clipboard.writeText(

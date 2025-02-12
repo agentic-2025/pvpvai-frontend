@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { AgentAvatarInteraction } from "./AgentAvatarInteraction";
 import demoImage from "./assets/demo-personalities/godzilla.jpg";
+import { Tables } from "@/lib/database.types";
 
 const meta = {
   title: "Buy-Sell Game/AgentAvatarInteraction",
@@ -17,15 +18,35 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-console.log(demoImage);
-console.log("HERE");
-console.log(demoImage.toString());
+// Mock room data for stories
+const mockRoomData: Tables<"rooms"> = {
+  id: 1,
+  name: "Test Room",
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  creator_id: 1,
+  type_id: 1,
+  chain_family: "evm",
+  chain_id: 1,
+  contract_address: "0x1234567890123456789012345678901234567890",
+  image_url: "",
+  color: "#FF0000",
+  active: true,
+  round_time: 300,
+  game_master_id: 1,
+  room_config: {},
+  game_master_action_log: {},
+  pvp_action_log: {},
+  participants: 0,
+};
 
 const baseArgs = {
   name: "Agent Smith",
   borderColor: "#FF7B00",
   imageUrl: demoImage.src,
   betAmount: 0,
+  agentAddress: "0x1234567890123456789012345678901234567890",
+  roomData: mockRoomData,
 };
 
 export const WithImage: Story = {
@@ -43,16 +64,16 @@ export const SellOverlay: Story = {
   args: {
     ...baseArgs,
     betAmount: 100,
-    betType: "Sell",
+    betType: "sell",
   },
 };
 
-export const SellWithoutImage: Story = {
+export const sellWithoutImage: Story = {
   args: {
     ...baseArgs,
     imageUrl: undefined,
     betAmount: 100,
-    betType: "Sell",
+    betType: "sell",
   },
 };
 
@@ -60,7 +81,7 @@ export const BuyOverlay: Story = {
   args: {
     ...baseArgs,
     betAmount: 3,
-    betType: "Buy",
+    betType: "buy",
   },
 };
 
@@ -69,6 +90,6 @@ export const BuyWithoutImage: Story = {
     ...baseArgs,
     imageUrl: undefined,
     betAmount: 3,
-    betType: "Buy",
+    betType: "buy",
   },
 };

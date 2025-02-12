@@ -1,12 +1,12 @@
 "use client";
+
 import { TableCell, TableRow } from "@/components/ui/table";
 import { chainMetadata, formatTimeLeft } from "@/lib/utils";
-import { RoomWithRelations } from "@/stories/RoomTable";
+import { RoomWithRelations, roomTypeMapping } from "@/lib/room-types";
 import Image from "next/image";
 import Link from "next/link";
 import { CSSProperties } from "react";
 import { AgentAvatar } from "./AgentAvatar";
-import { roomTypeMapping } from "./RoomTable";
 
 interface RoomTableRowProps {
   room: RoomWithRelations;

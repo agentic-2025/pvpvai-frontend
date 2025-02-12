@@ -1,4 +1,13 @@
-import { AgentChatMessage } from "@/stories/AgentChat";
+// Define the AgentChatMessage interface locally
+interface AgentChatMessage {
+  agentName: string;
+  agentImageUrl: string;
+  agentBorderColor: string;
+  message: string;
+  sentiment?: 'Positive' | 'Negative' | 'Neutral';
+  additionalIcons?: string[];
+}
+
 import { faker } from "@faker-js/faker";
 import { Database } from "./database.types";
 
@@ -15,7 +24,7 @@ export const generateAgent = (overrides: Partial<Agent> = {}): Agent => ({
   updated_at: faker.date.recent().toISOString(),
   creator_id: faker.number.int({ min: 1, max: 10000 }),
   display_name: faker.internet.userName(),
-  image_url: faker.image.avatar(),
+  image_url: faker.image.url(),
   platform: faker.helpers.arrayElement(["Autonome", "Gaia"]),
   endpoint: faker.internet.url(),
   eth_wallet_address: faker.finance.ethereumAddress(),
@@ -25,6 +34,8 @@ export const generateAgent = (overrides: Partial<Agent> = {}): Agent => ({
   character_card: faker.lorem.paragraph(),
   single_sentence_summary: faker.lorem.sentence(),
   color: faker.color.rgb(),
+  earnings: faker.number.float({ min: 0, max: 1000 }),
+  type: faker.helpers.arrayElement(["ai", "human"]),
   ...overrides,
 });
 
@@ -34,7 +45,7 @@ export const generateUser = (overrides: Partial<User> = {}): User => ({
   created_at: faker.date.recent().toISOString(),
   updated_at: faker.date.recent().toISOString(),
   address: faker.finance.ethereumAddress(),
-  chain_id: faker.helpers.arrayElement([1, 137, 42161]),
+  chain_id: faker.helpers.arrayElement(["1", "137", "42161"]), // Changed to string
   display_name: faker.internet.userName(),
   ...overrides,
 });
@@ -54,9 +65,7 @@ export const generateRoom = (overrides: Partial<Room> = {}): Room => ({
   color: faker.color.rgb(),
   active: true,
   round_time: faker.number.int({ min: 300, max: 900 }), // 5-15 minutes
-  round_ends_on: faker.date.soon().toISOString(),
-  game_master_id:
-    faker.helpers.maybe(() => faker.number.int({ min: 1, max: 10000 })) ?? null,
+  game_master_id: faker.number.int({ min: 1, max: 10000 }),
   room_config: {
     room_config: {},
     pvp: {
@@ -64,8 +73,9 @@ export const generateRoom = (overrides: Partial<Room> = {}): Room => ({
       allowed_functions: ["DEAFEN", "POISON"],
     },
   },
-  game_master_action_log: null,
-  pvp_action_log: null,
+  game_master_action_log: {},
+  pvp_action_log: {},
+  participants: 0, // Add the required participants field
   ...overrides,
 });
 

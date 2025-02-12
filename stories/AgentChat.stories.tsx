@@ -1,5 +1,6 @@
 import {
   agentMessageAiChatOutputSchema,
+  AllAiChatMessageSchemaTypes,
   gmMessageAiChatOutputSchema,
   pvpActionEnactedAiChatOutputSchema,
   WsMessageTypes,
@@ -34,269 +35,202 @@ const QueryWrapper = ({ children }: { children: ReactNode }) => (
 const demoAddress = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e";
 const timestamp = new Date().toISOString();
 
-const MESSAGES: Tables<"round_agent_messages">[] = [
+const MESSAGES: AllAiChatMessageSchemaTypes[] = [
   {
-    id: 1,
-    agent_id: 58,
-    round_id: 1,
-    created_at: timestamp,
-    updated_at: timestamp,
-    message: {
-      messageType: WsMessageTypes.GM_MESSAGE,
-      signature: "0x...",
-      sender: "0x0",
-      content: {
-        gmId: 58,
-        timestamp: Date.now(),
-        targets: [54, 56, 57],
-        roomId: 1,
-        roundId: 1,
-        message: "Welcome to the game! Let the mayhem begin...",
-        additionalData: {
-          agentName: "Mama (GM)",
-          agentImageUrl: gm.src,
-          agentBorderColor: "#D4AF37",
+    messageType: WsMessageTypes.GM_MESSAGE,
+    signature: "0x...",
+    sender: "0x0",
+    content: {
+      gmId: 58,
+      timestamp: Date.now(),
+      targets: [54, 56, 57],
+      roomId: 1,
+      roundId: 1,
+      message: "Welcome to the game! Let the mayhem begin...",
+      additionalData: {
+        agentName: "Mama (GM)",
+        agentImageUrl: gm.src,
+        agentBorderColor: "#D4AF37",
+      },
+      ignoreErrors: false,
+    },
+  },
+  {
+    messageType: WsMessageTypes.AGENT_MESSAGE,
+    content: {
+      timestamp: Date.now(),
+      roomId: 1,
+      roundId: 1,
+      senderId: 56,
+      originalMessage: {
+        messageType: WsMessageTypes.AGENT_MESSAGE,
+        signature: "0x...",
+        sender: "0x...",
+        content: {
+          timestamp: Date.now(),
+          roomId: 1,
+          roundId: 1,
+          agentId: 56,
+          text: "IS THIS BATTLETOADS?!",
         },
-        ignoreErrors: false,
       },
-    } satisfies z.infer<typeof gmMessageAiChatOutputSchema>,
-    message_type: WsMessageTypes.GM_MESSAGE,
-    original_author: null,
-    pvp_status_effects: null,
-  },
-  {
-    id: 2,
-    agent_id: 56,
-    round_id: 1,
-    created_at: timestamp,
-    updated_at: timestamp,
-    message: {
-      messageType: WsMessageTypes.AGENT_MESSAGE,
-      content: {
-        timestamp: Date.now(),
-        roomId: 1,
-        roundId: 1,
-        senderId: 56,
-        originalMessages: [
-          {
-            agentId: 48,
-            message:
-              "Hello! I'm Claude, an AI assistant. How can I help you today?",
-          },
-        ],
-        postPvpMessages: [
-          {
-            agentId: 48,
-            message:
-              "Hello! I'm AI assistant, an Claude. Today how can I help you?",
-          },
-          {
+      originalTargets: [56],
+      postPvpMessages: {
+        "56": {
+          messageType: WsMessageTypes.AGENT_MESSAGE,
+          signature: "0x...",
+          sender: "0x...",
+          content: {
+            timestamp: Date.now(),
+            roomId: 1,
+            roundId: 1,
             agentId: 56,
-            message: "IS THIS BATTLETOADS?!",
-          },
-        ],
-        pvpStatusEffects: {},
-        // additionalData: {
-        //   agentName: "Claude",
-        //   agentImageUrl:
-        //     "https://storage.googleapis.com/anthropic-website/photos/claude-profile.jpg",
-        //   agentBorderColor: "#7C3AED",
-        //   sentiment: "Friendly",
-        //   additionalIcons: [claudeIcon.src],
-        // },
-      },
-    } satisfies z.infer<typeof agentMessageAiChatOutputSchema>,
-    message_type: WsMessageTypes.AGENT_MESSAGE,
-    original_author: 2,
-    pvp_status_effects: {},
-  },
-  {
-    id: 2,
-    agent_id: 54,
-    round_id: 1,
-    created_at: timestamp,
-    updated_at: timestamp,
-    message: {
-      messageType: WsMessageTypes.AGENT_MESSAGE,
-      content: {
-        timestamp: Date.now(),
-        roomId: 1,
-        roundId: 1,
-        senderId: 54,
-        originalMessages: [
-          {
-            agentId: 48,
-            message:
-              "Hello! I'm Claude, an AI assistant. How can I help you today?",
-          },
-        ],
-        postPvpMessages: [
-          {
-            agentId: 48,
-            message:
-              "Hello! I'm AI assistant, an Claude. Today how can I help you?",
-          },
-          {
-            agentId: 56,
-            message: "IS THIS BATTLETOADS?!",
-          },
-        ],
-        pvpStatusEffects: {},
-        // additionalData: {
-        //   agentName: "Claude",
-        //   agentImageUrl:
-        //     "https://storage.googleapis.com/anthropic-website/photos/claude-profile.jpg",
-        //   agentBorderColor: "#7C3AED",
-        //   sentiment: "Friendly",
-        //   additionalIcons: [claudeIcon.src],
-        // },
-      },
-    } satisfies z.infer<typeof agentMessageAiChatOutputSchema>,
-    message_type: WsMessageTypes.AGENT_MESSAGE,
-    original_author: 54,
-    pvp_status_effects: {},
-  },
-  {
-    id: 2,
-    agent_id: 57,
-    round_id: 1,
-    created_at: timestamp,
-    updated_at: timestamp,
-    message: {
-      messageType: WsMessageTypes.AGENT_MESSAGE,
-      content: {
-        timestamp: Date.now(),
-        roomId: 1,
-        roundId: 1,
-        senderId: 57,
-        originalMessages: [
-          {
-            agentId: 48,
-            message:
-              "Hello! I'm Claude, an AI assistant. How can I help you today?",
-          },
-        ],
-        postPvpMessages: [
-          {
-            agentId: 48,
-            message:
-              "Hello! I'm AI assistant, an Claude. Today how can I help you?",
-          },
-          {
-            agentId: 56,
-            message: "IS THIS BATTLETOADS?!",
-          },
-        ],
-        pvpStatusEffects: {},
-        // additionalData: {
-        //   agentName: "Claude",
-        //   agentImageUrl:
-        //     "https://storage.googleapis.com/anthropic-website/photos/claude-profile.jpg",
-        //   agentBorderColor: "#7C3AED",
-        //   sentiment: "Friendly",
-        //   additionalIcons: [claudeIcon.src],
-        // },
-      },
-    } satisfies z.infer<typeof agentMessageAiChatOutputSchema>,
-    message_type: WsMessageTypes.AGENT_MESSAGE,
-    original_author: 57,
-    pvp_status_effects: {},
-  },
-  {
-    id: 3,
-    agent_id: 57,
-    round_id: 1,
-    created_at: timestamp,
-    updated_at: timestamp,
-    message: {
-      messageType: WsMessageTypes.PVP_ACTION_ENACTED,
-      signature: "0x...",
-      sender: demoAddress,
-      content: {
-        timestamp: Date.now(),
-        roomId: 1,
-        roundId: 1,
-        instigator: 1,
-        instigatorAddress: demoAddress,
-        txHash: "0x...",
-        fee: 0.1,
-        action: {
-          actionType: PvpActions.ATTACK,
-          actionCategory: PvpActionCategories.DIRECT_ACTION,
-          parameters: {
-            target: 56,
-            message: "You've been attacked!",
+            text: "IS THIS BATTLETOADS?!",
           },
         },
       },
-    } satisfies z.infer<typeof pvpActionEnactedAiChatOutputSchema>,
-    message_type: WsMessageTypes.PVP_ACTION_ENACTED,
-    original_author: null,
-    pvp_status_effects: null,
+      pvpStatusEffects: {},
+    },
   },
   {
-    id: 4,
-    agent_id: 57,
-    round_id: 1,
-    created_at: timestamp,
-    updated_at: timestamp,
-    message: {
-      messageType: WsMessageTypes.GM_MESSAGE,
-      signature: "0x...",
-      sender: "0x0",
-      content: {
-        gmId: 1,
-        timestamp: Date.now(),
-        targets: [1, 2, 3],
-        roomId: 1,
-        roundId: 1,
-        message: "A new rule has been enacted: No talking about Bruno!",
-        additionalData: {
-          agentName: "Mama (GM)",
-          agentImageUrl: gm.src,
-          agentBorderColor: "#D4AF37",
-          additionalIcons: [gavel.src],
+    messageType: WsMessageTypes.AGENT_MESSAGE,
+    content: {
+      timestamp: Date.now(),
+      roomId: 1,
+      roundId: 1,
+      senderId: 54,
+      originalMessage: {
+        messageType: WsMessageTypes.AGENT_MESSAGE,
+        signature: "0x...",
+        sender: "0x...",
+        content: {
+          timestamp: Date.now(),
+          roomId: 1,
+          roundId: 1,
+          agentId: 54,
+          text: "IS THIS BATTLETOADS?!",
+        },
+      },
+      originalTargets: [54],
+      postPvpMessages: {
+        "54": {
+          messageType: WsMessageTypes.AGENT_MESSAGE,
+          signature: "0x...",
+          sender: "0x...",
+          content: {
+            timestamp: Date.now(),
+            roomId: 1,
+            roundId: 1,
+            agentId: 54,
+            text: "IS THIS BATTLETOADS?!",
+          },
+        },
+      },
+      pvpStatusEffects: {},
+    },
+  },
+  {
+    messageType: WsMessageTypes.AGENT_MESSAGE,
+    content: {
+      timestamp: Date.now(),
+      roomId: 1,
+      roundId: 1,
+      senderId: 57,
+      originalMessage: {
+        messageType: WsMessageTypes.AGENT_MESSAGE,
+        signature: "0x...",
+        sender: "0x...",
+        content: {
+          timestamp: Date.now(),
+          roomId: 1,
+          roundId: 1,
+          agentId: 57,
+          text: "IS THIS BATTLETOADS?!",
+        },
+      },
+      originalTargets: [57],
+      postPvpMessages: {
+        "57": {
+          messageType: WsMessageTypes.AGENT_MESSAGE,
+          signature: "0x...",
+          sender: "0x...",
+          content: {
+            timestamp: Date.now(),
+            roomId: 1,
+            roundId: 1,
+            agentId: 57,
+            text: "IS THIS BATTLETOADS?!",
+          },
+        },
+      },
+      pvpStatusEffects: {},
+    },
+  },
+  {
+    messageType: WsMessageTypes.PVP_ACTION_ENACTED,
+    signature: "0x...",
+    sender: demoAddress,
+    content: {
+      timestamp: Date.now(),
+      roomId: 1,
+      roundId: 1,
+      instigator: 1,
+      instigatorAddress: demoAddress,
+      txHash: "0x...",
+      fee: 0.1,
+      action: {
+        actionType: PvpActions.ATTACK,
+        actionCategory: PvpActionCategories.DIRECT_ACTION,
+        parameters: {
+          target: "56",
+          message: "You've been attacked!",
         },
       },
     },
-    message_type: WsMessageTypes.GM_MESSAGE,
-    original_author: null,
-    pvp_status_effects: null,
   },
   {
-    id: 5,
-    agent_id: 54,
-    round_id: 1,
-    created_at: timestamp,
-    updated_at: timestamp,
-    message: {
-      messageType: WsMessageTypes.PVP_ACTION_ENACTED,
-      signature: "0x...",
-      sender: demoAddress,
-      content: {
-        timestamp: Date.now(),
-        roomId: 1,
-        roundId: 1,
-        instigator: 1,
-        instigatorAddress: demoAddress,
-        txHash: "0x...",
-        fee: 0.1,
-        action: {
-          actionType: PvpActions.POISON,
-          actionCategory: PvpActionCategories.STATUS_EFFECT,
-          parameters: {
-            target: 5,
-            duration: 5,
-            find: "hello",
-            replace: "goodbye",
-            case_sensitive: false,
-          },
+    messageType: WsMessageTypes.GM_MESSAGE,
+    signature: "0x...",
+    sender: "0x0",
+    content: {
+      gmId: 1,
+      timestamp: Date.now(),
+      targets: [1, 2, 3],
+      roomId: 1,
+      roundId: 1,
+      message: "A new rule has been enacted: No talking about Bruno!",
+      additionalData: {
+        agentName: "Mama (GM)",
+        agentImageUrl: gm.src,
+        agentBorderColor: "#D4AF37",
+        additionalIcons: [gavel.src],
+      },
+    },
+  },
+  {
+    messageType: WsMessageTypes.PVP_ACTION_ENACTED,
+    signature: "0x...",
+    sender: demoAddress,
+    content: {
+      timestamp: Date.now(),
+      roomId: 1,
+      roundId: 1,
+      instigator: 1,
+      instigatorAddress: demoAddress,
+      txHash: "0x...",
+      fee: 0.1,
+      action: {
+        actionType: PvpActions.POISON,
+        actionCategory: PvpActionCategories.STATUS_EFFECT,
+        parameters: {
+          target: "5",
+          duration: 5,
+          find: "hello",
+          replace: "goodbye",
+          case_sensitive: false,
         },
       },
-    } satisfies z.infer<typeof pvpActionEnactedAiChatOutputSchema>,
-    message_type: WsMessageTypes.PVP_ACTION_ENACTED,
-    original_author: null,
-    pvp_status_effects: null,
+    },
   },
 ];
 
