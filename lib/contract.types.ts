@@ -2113,6 +2113,13 @@ export const roomAbi = [
   },
   {
     type: "function",
+    inputs: [{ name: "verb", internalType: "string", type: "string" }],
+    name: "getPvpActionFee",
+    outputs: [{ name: "", internalType: "uint256", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
     inputs: [{ name: "agent", internalType: "address", type: "address" }],
     name: "getPvpStatuses",
     outputs: [
@@ -2692,41 +2699,22 @@ export const roomAbi = [
   { type: "error", inputs: [], name: "Room_ActionNotSupported" },
   { type: "error", inputs: [], name: "Room_AgentAlreadyDecided" },
   { type: "error", inputs: [], name: "Room_AgentAlreadyExists" },
-  {
-    type: "error",
-    inputs: [{ name: "agent", internalType: "address", type: "address" }],
-    name: "Room_AgentNotActive",
-  },
-  {
-    type: "error",
-    inputs: [{ name: "agent", internalType: "address", type: "address" }],
-    name: "Room_AgentNotExists",
-  },
+  { type: "error", inputs: [], name: "Room_AgentNotActive" },
+  { type: "error", inputs: [], name: "Room_AgentNotExists" },
   { type: "error", inputs: [], name: "Room_InvalidAmount" },
   { type: "error", inputs: [], name: "Room_InvalidBetType" },
-  { type: "error", inputs: [], name: "Room_InvalidFee" },
   { type: "error", inputs: [], name: "Room_InvalidPvpAction" },
   { type: "error", inputs: [], name: "Room_InvalidRoundDuration" },
   { type: "error", inputs: [], name: "Room_MaxAgentsReached" },
   { type: "error", inputs: [], name: "Room_NoWinnings" },
   { type: "error", inputs: [], name: "Room_NotAuthorized" },
-  { type: "error", inputs: [], name: "Room_NotCreator" },
   { type: "error", inputs: [], name: "Room_NotGameMaster" },
-  { type: "error", inputs: [], name: "Room_NotGameMasterOrCreator" },
   {
     type: "error",
     inputs: [
       { name: "currentRoundId", internalType: "uint256", type: "uint256" },
     ],
     name: "Room_RoundNotClosed",
-  },
-  {
-    type: "error",
-    inputs: [
-      { name: "expected", internalType: "enum Room.RoundState", type: "uint8" },
-      { name: "actual", internalType: "enum Room.RoundState", type: "uint8" },
-    ],
-    name: "Room_RoundNotExpectedStatus",
   },
   { type: "error", inputs: [], name: "Room_SenderAlreadyClaimedWinnings" },
   { type: "error", inputs: [], name: "Room_SenderHasNoBetInRound" },

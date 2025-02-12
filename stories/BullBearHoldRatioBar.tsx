@@ -1,11 +1,11 @@
-import React from "react";
+import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
+import React from "react";
 
 interface BullBearHoldRatioBarProps {
   buy: number;
@@ -19,9 +19,12 @@ export const BullBearHoldRatioBar: React.FC<BullBearHoldRatioBarProps> = ({
   hold,
 }) => {
   const total = BigInt(buy) + BigInt(sell) + BigInt(hold);
-  const buyPercentage = total > 0 ? Number((Number(BigInt(buy)) / Number(total)) * 100) : 0;
-  const sellPercentage = total > 0 ? Number((Number(BigInt(sell)) / Number(total)) * 100) : 0;
-  const holdPercentage = total > 0 ? Number((Number(BigInt(hold)) / Number(total)) * 100) : 0;
+  const buyPercentage =
+    total > 0 ? Number((Number(BigInt(buy)) / Number(total)) * 100) : 0;
+  const sellPercentage =
+    total > 0 ? Number((Number(BigInt(sell)) / Number(total)) * 100) : 0;
+  const holdPercentage =
+    total > 0 ? Number((Number(BigInt(hold)) / Number(total)) * 100) : 0;
 
   const betDetails = [
     { label: "Buy", amount: buy, percentage: buyPercentage, color: "#16a34a" },
@@ -43,24 +46,32 @@ export const BullBearHoldRatioBar: React.FC<BullBearHoldRatioBarProps> = ({
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="relative w-full h-4 flex rounded-full overflow-hidden border border-gray-700 cursor-pointer">
-            {/* Buy Section */}
-            <div
-              className="h-full bg-green-500 transition-all"
-              style={{ width: `${buyPercentage}%` }}
-            />
+          <div className="relative w-full h-6 flex rounded-full overflow-hidden border-gray-500 border-2 cursor-pointer text-center">
+            {total === BigInt(0) ? (
+              <div className="h-full w-full transition-all text-center">
+                No bets placed
+              </div>
+            ) : (
+              <>
+                {/* Buy Section */}
+                <div
+                  className="h-full bg-green-500 transition-all"
+                  style={{ width: `${buyPercentage}%` }}
+                />
 
-            {/* Hold Section */}
-            <div
-              className="h-full bg-gray-500 transition-all"
-              style={{ width: `${holdPercentage}%` }}
-            />
+                {/* Hold Section */}
+                <div
+                  className="h-full bg-gray-500 transition-all"
+                  style={{ width: `${holdPercentage}%` }}
+                />
 
-            {/* Sell Section */}
-            <div
-              className="h-full bg-red-500 transition-all"
-              style={{ width: `${sellPercentage}%` }}
-            />
+                {/* Sell Section */}
+                <div
+                  className="h-full bg-red-500 transition-all"
+                  style={{ width: `${sellPercentage}%` }}
+                />
+              </>
+            )}
           </div>
         </TooltipTrigger>
 
@@ -80,7 +91,7 @@ export const BullBearHoldRatioBar: React.FC<BullBearHoldRatioBarProps> = ({
                     {item.label}
                   </Badge>
                   <span className="text-gray-200 whitespace-nowrap">
-                    {item.percentage.toFixed(1)}% 
+                    {item.percentage.toFixed(1)}%
                   </span>
                 </div>
               )

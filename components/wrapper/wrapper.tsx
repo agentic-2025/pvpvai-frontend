@@ -8,13 +8,13 @@ import "@rainbow-me/rainbowkit/styles.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { createPublicClient, createWalletClient, custom } from "viem";
-import { baseSepolia } from "viem/chains";
+import { arbitrumSepolia, baseSepolia } from "viem/chains";
 import { http, WagmiProvider } from "wagmi";
 
 export const wagmiConfig = createPublicClient({
-  chain: baseSepolia,
+  chain: arbitrumSepolia,
   transport: http(
-    `https://base-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`
+    `https://arb-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`
   ),
 });
 
@@ -26,7 +26,7 @@ export const walletClient = createWalletClient({
 export const config = getDefaultConfig({
   appName: "PvPvAI",
   projectId: `${process.env.NEXT_PUBLIC_RAINBOWKIT_PROJECT_ID}`,
-  chains: [baseSepolia],
+  chains: [baseSepolia, arbitrumSepolia],
   ssr: true, // If your dApp uses server side rendering (SSR)
 });
 
@@ -47,7 +47,7 @@ export default function Wrapper({ children }: { children: React.ReactNode }) {
               <Navbar />
               {children}
             </ThemeProvider>
-            <ReactQueryDevtools initialIsOpen={false} />
+            {/* <ReactQueryDevtools initialIsOpen={false} /> */}
           </RainbowKitProvider>
         </QueryClientProvider>
       </WagmiProvider>
