@@ -120,6 +120,7 @@ export const Deafen: Story = {
         ...baseMessage.content,
         action: {
           actionType: PvpActions.DEAFEN,
+          actionCategory: PvpActionCategories.STATUS_EFFECT,
           parameters: {
             target: 51,
             duration: 30,

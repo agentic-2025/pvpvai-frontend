@@ -3,7 +3,7 @@ import type { z } from "zod";
 import type { pvpActionEnactedAiChatOutputSchema } from "../lib/backend.types";
 import type { Tables } from "../lib/database.types";
 import { PvpActions } from "../lib/pvp.types";
-import { useAgentQuery } from "../lib/queries/agentQueries";
+import { useAgentByWalletAddressQuery } from "../lib/queries/agentQueries";
 import { AgentBadge } from "./AgentBadge";
 import { AgentChatLine } from "./AgentChatLine";
 import { PlayerAddressChip } from "./PlayerAddressChip";
@@ -28,11 +28,12 @@ const actionToIcon: Record<PvpActions, string> = {
   [PvpActions.MIND_CONTROL]: Poison.src,
   [PvpActions.FRENZY]: Knife.src,
   [PvpActions.OVERLOAD]: Deafen.src,
-  [PvpActions.HACK]: Poison.src,
-  [PvpActions.CORRUPT]: Silence.src,
+  [PvpActions.CHARM]: Poison.src,
+  [PvpActions.INVISIBLE]: Deafen.src,
+  [PvpActions.CLAIRVOYANCE]: Poison.src,
 };
 
-const actionColors = {
+export const actionColors = {
   [PvpActions.POISON]: {
     text: "#A020F0", // Bright purple
     darkText: "#6B21A8", // Dark purple
@@ -42,7 +43,7 @@ const actionColors = {
     darkText: "#991B1B", // Dark red
   },
   [PvpActions.SILENCE]: {
-    text: "#6B7280", // Grey
+    text: "#BFC7D4", // Grey
     darkText: "#4B5563", // Dark grey
   },
   [PvpActions.DEAFEN]: {
@@ -78,15 +79,15 @@ const AgentBadgeWrapper: FC<{ agent: Tables<"agents"> }> = ({ agent }) => (
 
 type PvPActionChatLineProps = {
   message: z.infer<typeof pvpActionEnactedAiChatOutputSchema>;
+  roomId: number;
 };
 
-const ActionMessage: FC<PvPActionChatLineProps> = ({ message }) => {
+const ActionMessage: FC<PvPActionChatLineProps> = ({ roomId, message }) => {
   const { content } = message;
   const { action, instigatorAddress } = content;
   const targetId = action.parameters.target;
 
-  const { data: targetAgent } = useAgentQuery(targetId);
-
+  const { data: targetAgent } = useAgentByWalletAddressQuery(roomId, targetId);
   if (!targetAgent) return null;
 
   const actionColor = actionColors[action.actionType];
@@ -99,7 +100,7 @@ const ActionMessage: FC<PvPActionChatLineProps> = ({ message }) => {
             <div className="flex items-center gap-2">
               <PlayerAddressChip address={instigatorAddress} variant="small" />
               <span
-                className="font-bold italic"
+                className="font-bold italic  text-foreground"
                 style={{ color: actionColor.text }}
               >
                 silenced
@@ -119,10 +120,10 @@ const ActionMessage: FC<PvPActionChatLineProps> = ({ message }) => {
             <div className="flex items-center gap-2">
               <PlayerAddressChip address={instigatorAddress} variant="small" />
               <span
-                className="font-bold italic"
+                className="font-bold italic text-foreground"
                 style={{ color: actionColor.text }}
               >
-                muted
+                deafened
               </span>
               <AgentBadgeWrapper agent={targetAgent} />
             </div>
@@ -188,7 +189,10 @@ const ActionMessage: FC<PvPActionChatLineProps> = ({ message }) => {
   );
 };
 
-export const PvPActionChatLine: FC<PvPActionChatLineProps> = ({ message }) => {
+export const PvPActionChatLine: FC<PvPActionChatLineProps> = ({
+  message,
+  roomId,
+}) => {
   const { content } = message;
   const { action } = content;
 
@@ -198,7 +202,7 @@ export const PvPActionChatLine: FC<PvPActionChatLineProps> = ({ message }) => {
       agentName="PvP"
       agentImageUrl={PvPActionIcon.src}
       agentBorderColor="#EEEEEE"
-      message={<ActionMessage message={message} />}
+      message={<ActionMessage message={message} roomId={roomId} />}
       backgroundIcon={actionToIcon[action.actionType]}
     />
   );

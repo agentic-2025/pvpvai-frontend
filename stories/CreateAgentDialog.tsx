@@ -43,7 +43,6 @@ const generateRandomColor = (includeHash = false) => {
 const totalSteps = 7;
 
 export default function CreateAgentModal() {
-  const { writeContract } = useWriteContract();
   const publicClient = usePublicClient();
   const [step, setStep] = useState(0);
   const [open, setOpen] = useState(false);

@@ -64,6 +64,12 @@ export const isSupportedInAiChat = (messageType: WsMessageTypes) => {
   );
 };
 
+export const authenticatedMessageSchema = z.object({
+  messageType: z.string(), // We'll override this with literals in extending schemas
+  signature: z.string(),
+  sender: z.string(),
+});
+
 /*
   SUBSCRIBE ROOM MESSAGES SCHEMA:
   Sent by:
@@ -198,11 +204,21 @@ export const agentMessageAiChatOutputSchema = z.object({
     senderId: z.number(),
     originalMessage: agentMessageInputSchema,
     originalTargets: z.array(z.number()),
+    currentBlockTimestamp: z.number(),
     postPvpMessages: z.record(z.string(), agentMessageAgentOutputSchema),
-    pvpStatusEffects: z.record(z.string(), z.array(z.any())), //TODO replace with actual PvP status effect schema
+    pvpStatusEffects: z.record(
+      z.string(),
+      z.array(
+        z.object({
+          verb: z.string(),
+          parameters: z.any(),
+          endTime: z.number(),
+          instigator: z.string(),
+        })
+      )
+    ), //TODO replace with actual PvP status effect schema
   }),
 });
-
 /*
   SYSTEM NOTIFICATION SCHEMA:
   Sent by:
@@ -355,7 +371,7 @@ const deafenStatusSchema = z.object({
   }),
 });
 
-const poisonStatusSchema = z.object({
+export const poisonStatusSchema = z.object({
   actionType: z.literal(PvpActions.POISON),
   actionCategory: z.literal(PvpActionCategories.STATUS_EFFECT),
   parameters: z.object({
@@ -396,22 +412,20 @@ export type PvpAllAllowedParametersType =
 export type PvpAllPvpActionsType = z.infer<typeof pvpActionSchema>;
 
 // Update the pvpActionEnactedAiChatOutputSchema
-export const pvpActionEnactedAiChatOutputSchema = z.object({
-  messageType: z.literal(WsMessageTypes.PVP_ACTION_ENACTED),
-  signature: z.string(),
-  sender: z.string(),
-  content: z.object({
-    timestamp: z.number(),
-    roomId: z.number(),
-    roundId: z.number(),
-    instigator: z.number(),
-    instigatorAddress: z.string(),
-    txHash: z.string(),
-    fee: z.number().optional(),
-    action: pvpActionSchema,
-  }),
-});
-
+export const pvpActionEnactedAiChatOutputSchema =
+  authenticatedMessageSchema.extend({
+    messageType: z.literal(WsMessageTypes.PVP_ACTION_ENACTED),
+    content: z.object({
+      timestamp: z.number(),
+      effectEndTime: z.number(),
+      roomId: z.number(),
+      roundId: z.number(),
+      instigatorAddress: z.string(),
+      txHash: z.string().optional(),
+      fee: z.number().optional(),
+      action: pvpActionSchema,
+    }),
+  });
 // Response to every POST request to /messages
 export const messagesRestResponseSchema = z.object({
   message: z.string().optional(),

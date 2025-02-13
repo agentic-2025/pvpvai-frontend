@@ -23,9 +23,9 @@ export function RoomTableRow({
   showToken,
   className = "hover:bg-secondary/20",
 }: RoomTableRowProps) {
-  const timer = formatTimeLeft(
-    new Date(room.round_ends_on || "000000").getTime() / 1000
-  ); // Ensure the format is correct
+  // const timer = formatTimeLeft(
+  //   new Date(room.round_ends_on || "000000").getTime() / 1000
+  // ); // Ensure the format is correct
   const roomType = roomTypeMapping[room.type_id];
   return (
     <TableRow style={style} className={className}>
@@ -68,11 +68,14 @@ export function RoomTableRow({
         <TableCell>
           <div className="flex items-center gap-2">
             <img
-              src={(room.room_config as any)?.room_config?.buySellTokenImage}
-              alt={(room.room_config as any)?.room_config?.buySellTokenSymbol}
+              src={
+                (room.room_config as any)?.token?.image_url ||
+                "https://cryptologos.cc/logos/bitcoin-btc-logo.svg?v=040"
+              }
+              alt={(room.room_config as any)?.token?.symbol || "unknown token"}
               className="size-6"
-              width={2000}
-              height={2000}
+              width={20}
+              height={20}
             />
             <span className="text-lg text-gray-900 dark:text-gray-300">
               {(room.room_config as any)?.room_config?.buySellTokenSymbol}
@@ -81,9 +84,9 @@ export function RoomTableRow({
         </TableCell>
       ) : null}
 
-      <TableCell className="text-lg text-center">
+      {/* <TableCell className="text-lg text-center">
         <span style={{ color: timer.color }}>{timer.text}</span>
-      </TableCell>
+      </TableCell> */}
 
       <TableCell className="pr-6">
         <div className="flex -space-x-2">

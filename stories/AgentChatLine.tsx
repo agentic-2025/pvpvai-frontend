@@ -2,15 +2,9 @@
 
 /*
   Agent chat line is the base class used to consistently style all chat line variants
-  that appear in AI Chat. You will generally never want to use this component directly, 
-  instead use one of the components that use is, likee GMChatLine, PvpActionChatLine, etc. 
+  that appear in AI Chat. You will generally never want to use this component directly,
+  instead use one of the components that use is, likee GMChatLine, PvpActionChatLine, etc.
 */
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import React, { ReactNode } from "react";
 import { AgentBadge } from "./AgentBadge";
@@ -98,7 +92,7 @@ export function AgentChatLine({
         />
       </div>
       <div
-        className="flex-1 min-w-0 rounded px-3 py-1 relative"
+        className="flex-1 min-w-0 rounded px-3 py-1 relative overflow-hidden"
         style={{
           backgroundColor: `${agentBorderColor}${finalOpacity}`,
           border: `2px solid ${agentBorderColor}45`,
@@ -106,7 +100,7 @@ export function AgentChatLine({
       >
         {backgroundIcon && (
           <div
-            className="absolute inset-0 pointer-events-none"
+            className="absolute inset-0 pointer-events-none z-0"
             style={{
               backgroundImage: `url(${backgroundIcon})`,
               backgroundSize: "contain",
@@ -118,32 +112,32 @@ export function AgentChatLine({
             }}
           />
         )}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 relative z-10">
           <div className="flex-1 min-w-0">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div
-                    className={cn(
-                      "text-sm w-full overflow-x-hidden",
-                      "text-white",
-                      // Only apply action colors for specific actions
-                      agentName.toLowerCase() in actionColors &&
-                        `text-[${actionColor.text}]`,
-                      "line-clamp-5 break-words"
-                    )}
-                  >
-                    {renderedMessage}
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent
-                  side="bottom"
-                  className="max-w-[300px] break-words bg-gray-800 border-gray-700 text-gray-200"
-                >
-                  {renderedMessage}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            {/* <TooltipProvider> */}
+            {/* <Tooltip> */}
+            {/* <TooltipTrigger asChild> */}
+            <div
+              className={cn(
+                "text-md w-full overflow-x-hidden",
+                "text-white",
+                // Only apply action colors for specific actions
+                agentName.toLowerCase() in actionColors &&
+                  `text-[${actionColor.text}]`,
+                "line-clamp-5 break-words"
+              )}
+            >
+              {renderedMessage}
+            </div>
+            {/* </TooltipTrigger> */}
+            {/* <TooltipContent */}
+            {/* side="bottom" */}
+            {/* className="max-w-[300px] break-words bg-gray-800 border-gray-700 text-gray-200" */}
+            {/* > */}
+            {/* {renderedMessage} */}
+            {/* </TooltipContent> */}
+            {/* </Tooltip> */}
+            {/* </TooltipProvider> */}
           </div>
         </div>
       </div>

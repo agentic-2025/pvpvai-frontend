@@ -1,4 +1,5 @@
 import { FC, useEffect, useState } from "react";
+import { actionColors } from "./PvPActionChatLine";
 
 interface Status {
   verb: string;
@@ -29,6 +30,7 @@ export const PvpStatusEffects: FC<{ statuses: Status[] }> = ({ statuses }) => {
   }, [statuses]);
 
   if (!statuses.length) return null;
+  
 
   return (
     <div className="absolute -top-2 -right-2 flex flex-wrap gap-1 justify-end">
@@ -36,8 +38,10 @@ export const PvpStatusEffects: FC<{ statuses: Status[] }> = ({ statuses }) => {
         <div
           key={idx}
           // Comment: show that we added countdown timer
-          className="bg-red-600 text-white text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1"
+          className="text-white text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1"
           title={`Applied by ${status.instigator}`}
+          style={{color: status.verb.toUpperCase() === "SILENCE" ? "#FFF": "#000", backgroundColor: actionColors[status.verb.toUpperCase() as "POISON" | "SILENCE" | "DEAFEN" | "ATTACK"].darkText}}
+    
         >
           {status.verb.toUpperCase()}
           <span className="text-[0.7rem]">

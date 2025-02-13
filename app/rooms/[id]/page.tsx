@@ -34,7 +34,7 @@ import { useEffect, useState } from "react";
 import useWebSocket from "react-use-websocket";
 import { getAddress, PublicClient } from "viem";
 import { readContract } from "viem/actions";
-import { usePublicClient } from "wagmi";
+import { useAccount, usePublicClient } from "wagmi";
 import { z } from "zod";
 
 // --- Query Hooks ---
@@ -67,6 +67,25 @@ const useRoundsByRoom = (roomId: number) => {
       return data;
     },
   });
+};
+
+const calculateCurrentRoundAndCountdown = (
+  createdAt: string,
+  roundDuration: number
+) => {
+  const createdAtTimestamp = Math.floor(new Date(createdAt).getTime() / 1000);
+  const currentTimestamp = Math.floor(Date.now() / 1000);
+  const elapsedTime = currentTimestamp - createdAtTimestamp;
+
+  // If the room hasn't started yet, return round 0 and the time until start
+  if (elapsedTime < 0) {
+    return { currentRound: 0, timeLeft: -elapsedTime };
+  }
+
+  const currentRound = Math.floor(elapsedTime / roundDuration) + 1;
+  const timeLeft = roundDuration - (elapsedTime % roundDuration);
+
+  return { currentRound, timeLeft };
 };
 
 type RoundAgentLookup = {
@@ -502,7 +521,7 @@ function AgentsDisplay({
   });
 
   return (
-    <div className="w-full h-[60%] bg-card rounded-lg p-3">
+    <div className="w-full h-[40%] bg-card rounded-lg p-3">
       <div className="bg-[#202123] flex flex-col items-center justify-center w-full h-full rounded-md">
         {isLoadingAgents ? (
           <AgentsSkeleton />
@@ -533,7 +552,7 @@ function AgentsDisplay({
               })()}
             </div>
 
-            <div className="flex flex-wrap justify-center items-center gap-24 overflow-y-auto scroll-thin w-full max-h-[80%] p-4">
+            <div className="flex flex-wrap justify-center items-center gap-8 overflow-y-auto scroll-thin w-full max-h-[80%] p-4">
               {roundAgents && Object.values(roundAgents).length > 0 ? (
                 Object.values(roundAgents).map((agent) => (
                   <BuySellGameAvatarInteraction
@@ -572,7 +591,7 @@ export default function RoomDetailPage() {
   const roomId = parseInt(params.id);
   const currentUserId = 1; // TODO: Do not hardcode me
   const publicClient = usePublicClient();
-
+  const { address: walletAddress } = useAccount();
   // Timer states
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -922,6 +941,39 @@ export default function RoomDetailPage() {
     setSelectedRoundId(roundId);
   };
 
+  useEffect(() => {
+    if (!roomData || !roomData.room_config || !roundList.length) return;
+
+    // Use the earliest (first) round's created_at as the baseline.
+    const baselineRoundCreatedAt = roundList[roundList.length - 1]?.created_at;
+    const roundDuration = roomData.room_config.round_duration;
+    if (!baselineRoundCreatedAt) return;
+
+    const updateTimer = () => {
+      const { timeLeft } = calculateCurrentRoundAndCountdown(
+        baselineRoundCreatedAt,
+        roundDuration
+      );
+      setTimeLeft(timeLeft);
+    };
+
+    // Update the timer every second based solely on recalculation.
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+
+    return () => clearInterval(interval);
+  }, [roomData, roundList]);
+
+  useEffect(() => {
+    if (timeLeft !== null) {
+      setFormattedTime(
+        timeLeft > 0
+          ? new Date(timeLeft * 1000).toISOString().substr(14, 5)
+          : "00:00"
+      );
+    }
+  }, [timeLeft]);
+
   if (isLoadingRoom)
     return (
       <div className="flex items-center justify-center h-screen">
@@ -955,6 +1007,7 @@ export default function RoomDetailPage() {
                 className="h-full min-w-full bg-[#202123] p-3"
                 showHeader={false}
                 messages={[...(roundAgentMessages || []), ...aiChatMessages]}
+                roomId={roomId}
                 loading={isLoadingRoundAgentMessages}
                 roundId={currentRoundId}
               />
@@ -966,7 +1019,7 @@ export default function RoomDetailPage() {
               roomData={roomData}
               roundList={roundList}
               currentRoundIndex={currentRoundIndex}
-              timeLeft={timeLeft?.toLocaleString() || "00:00"} // <-- Formatted string (e.g., "04:32")
+              timeLeft={formattedTime} // <-- Formatted string (e.g., "04:32")
               isLoadingRoom={isLoadingRoom}
               isLoadingRounds={isLoadingRounds}
               setCurrentRoundIndex={setCurrentRoundIndex}
@@ -986,7 +1039,7 @@ export default function RoomDetailPage() {
                   if (readyState === WebSocket.OPEN) {
                     const messagePayload = {
                       messageType: WsMessageTypes.PUBLIC_CHAT,
-                      sender: currentUserId.toString(),
+                      sender: walletAddress,
                       signature: "signature",
                       content: {
                         text: message,
@@ -1014,6 +1067,10 @@ export default function RoomDetailPage() {
               />
             </div>
           </div>
+        </div>
+        <div className="text-sm text-gray-400 text-center">
+          Internal round id: {currentRoundId}, contract round id:{" "}
+          {roundIdFromContract}
         </div>
       </div>
     </div>
