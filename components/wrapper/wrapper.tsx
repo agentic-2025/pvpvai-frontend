@@ -12,9 +12,9 @@ import { arbitrumSepolia, baseSepolia } from "viem/chains";
 import { http, WagmiProvider } from "wagmi";
 
 export const wagmiConfig = createPublicClient({
-  chain: arbitrumSepolia,
+  chain: baseSepolia,
   transport: http(
-    `https://arb-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`
+    `${process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL}`
   ),
 });
 
