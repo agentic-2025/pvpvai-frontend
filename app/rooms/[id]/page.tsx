@@ -73,7 +73,7 @@ const calculateCurrentRoundAndCountdown = (
   roundDuration: number
 ) => {
   const createdAtTimestamp = Math.floor(new Date(createdAt).getTime() / 1000);
-  const currentTimestamp = Math.floor(Date.now() / 1000);
+  const currentTimestamp = Math.floor(new Date().getTime() / 1000);
   const elapsedTime = currentTimestamp - createdAtTimestamp;
 
   // If the room hasn't started yet, return round 0 and the time until start
@@ -287,20 +287,6 @@ function RoundDetailsAndNavigation({
           >
             Next
           </button>
-        </div>
-
-        <div className="flex -space-x-2">
-          {roundAgents &&
-            Object.values(roundAgents).map((agent) => (
-              <AgentAvatar
-                key={agent.agentData.id}
-                id={agent.agentData.id}
-                name={agent.agentData.display_name || ""}
-                imageUrl={agent.agentData.image_url || ""}
-                borderColor={agent.agentData.color || ""}
-                variant="sm"
-              />
-            ))}
         </div>
 
         <span className="text-lg font-semibold">
@@ -682,58 +668,6 @@ export default function RoomDetailPage() {
     fetchRoundIdFromContract();
   }, [currentRoundId, roomData]);
 
-  useEffect(() => {
-    if (!publicClient) {
-      console.error("No public client found");
-      return;
-    }
-    const updateTimer = async () => {
-      if (!roomData || !roundIdFromContract) return;
-      const roundEndTimeFetched = await getRoundEndTime(
-        roomData.contract_address || "",
-        roundIdFromContract
-      );
-      if (!roundEndTimeFetched) return;
-      console.log("Round End Time:", roundEndTimeFetched);
-
-      const currentTimestamp = await fetchCurrentBlockTimestamp(publicClient);
-      if (!currentTimestamp) return;
-
-      console.log("Contract Round ID:", roundIdFromContract);
-      console.log("Round End Time:", roundEndTimeFetched);
-      console.log("Current Timestamp:", currentTimestamp);
-      console.log("Date.now()", Date.now());
-
-      const baseRemainingTime = roundEndTimeFetched - currentTimestamp;
-      setTimeLeft(baseRemainingTime > 0 ? baseRemainingTime : 0);
-    };
-
-    // Initial fetch
-    updateTimer();
-
-    // Countdown: decrement the timer every second
-    const countdownInterval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev === null) return prev;
-        const newTime = prev - 1;
-        return newTime >= 0 ? newTime : 0;
-      });
-    }, 1000);
-
-    // Refresh the timer data every 5 seconds to adjust for drift
-    const refreshInterval = setInterval(updateTimer, 5000);
-
-    return () => {
-      clearInterval(countdownInterval);
-      clearInterval(refreshInterval);
-    };
-  }, [currentRoundIndex, publicClient, roomData, roundIdFromContract]); // Only re-run when currentRoundIndex changes
-
-  useEffect(() => {
-    if (timeLeft !== null) {
-      setFormattedTime(timeLeft > 0 ? formatTime(timeLeft) : "00:00");
-    }
-  }, [timeLeft]);
 
   useEffect(() => {
     if (!roomData || !roomData.room_config || !roundList.length) return;
@@ -748,7 +682,14 @@ export default function RoomDetailPage() {
         baselineRoundCreatedAt,
         roundDuration
       );
-      setTimeLeft(timeLeft);
+
+      if (timeLeft !== null) {
+        setFormattedTime(
+          timeLeft > 0
+            ? new Date(timeLeft * 1000).toISOString().substr(14, 5)
+            : "00:00"
+        );
+      }
     };
 
     // Update the timer every second based solely on recalculation.
@@ -758,15 +699,6 @@ export default function RoomDetailPage() {
     return () => clearInterval(interval);
   }, [roomData, roundList]);
 
-  useEffect(() => {
-    if (timeLeft !== null) {
-      setFormattedTime(
-        timeLeft > 0
-          ? new Date(timeLeft * 1000).toISOString().substr(14, 5)
-          : "00:00"
-      );
-    }
-  }, [timeLeft]);
 
   const handleRoundInserts = (payload: any) => {
     if (payload.new.room_id !== roomId) {
