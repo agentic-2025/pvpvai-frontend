@@ -2,8 +2,8 @@
 
 /*
   Agent chat line is the base class used to consistently style all chat line variants
-  that appear in AI Chat. You will generally never want to use this component directly, 
-  instead use one of the components that use is, likee GMChatLine, PvpActionChatLine, etc. 
+  that appear in AI Chat. You will generally never want to use this component directly,
+  instead use one of the components that use is, likee GMChatLine, PvpActionChatLine, etc.
 */
 import {
   Tooltip,
@@ -16,6 +16,7 @@ import React, { ReactNode } from "react";
 import { AgentBadge } from "./AgentBadge";
 
 interface AgentChatLineProps {
+  roomId: number;
   agentId: number;
   agentName: string;
   agentImageUrl?: string;
@@ -68,6 +69,7 @@ export function AgentChatLine({
   popularity,
   backgroundIcon,
   backgroundImageOpacity,
+  roomId,
 }: AgentChatLineProps) {
   let renderedMessage: string | ReactNode = message;
   if (typeof message === "object" && message !== null && "text" in message) {
