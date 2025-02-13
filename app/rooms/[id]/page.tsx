@@ -372,33 +372,60 @@ function AgentsDisplay({
 
   return (
     <div className="w-full h-[60%] bg-card rounded-lg p-3">
-      <div className="bg-[#202123] flex items-center justify-center w-full h-full rounded-md">
+      <div className="bg-[#202123] flex flex-col items-center justify-center w-full h-full rounded-md">
         {isLoadingAgents ? (
           <AgentsSkeleton />
         ) : (
-          <div className="flex flex-wrap justify-center items-center gap-24 overflow-y-auto scroll-thin w-full max-h-full">
-            {roundAgents && Object.values(roundAgents).length > 0 ? (
-              Object.values(roundAgents).map((agent) => (
-                <BuySellGameAvatarInteraction
-                  key={agent.agentData.id}
-                  roomData={roomData}
-                  id={agent.agentData.id}
-                  name={agent.agentData.display_name}
-                  imageUrl={agent.agentData.image_url || ""}
-                  borderColor={agent.agentData.color}
-                  sell={agentPositions[agent.agentData.id]?.sell || 0}
-                  buy={agentPositions[agent.agentData.id]?.buyPool || 0}
-                  hold={agentPositions[agent.agentData.id]?.hold || 0}
-                  variant="full"
-                  betAmount={agentPositions[agent.agentData.id]?.hold || 0}
-                  address={agent.walletAddress}
-                />
-              ))
-            ) : (
-              <span className="text-gray-400">
-                No agents available in this round
-              </span>
-            )}
+          <div className="flex flex-col items-center justify-center w-full h-full">
+            <div className="flex flex-col items-center justify-center gap-y-2 w-full pb-4 border-b border-gray-800 mb-4">
+              <span className="text-gray-400">Agents are discussing:</span>
+              {(() => {
+                try {
+                  const token = roomData.room_config?.token;
+                  if (!token)
+                    return <div>No token specified in room config</div>;
+
+                  return (
+                    <div className="text-xl font-medium flex items-center gap-x-2">
+                      <img
+                        src={token.image_url}
+                        alt={token.name}
+                        className="w-14 h-14 mr-2"
+                      />
+                      {token.name} (${token.symbol})
+                    </div>
+                  );
+                } catch (error) {
+                  console.error("Error parsing room config:", error);
+                  return null;
+                }
+              })()}
+            </div>
+
+            <div className="flex flex-wrap justify-center items-center gap-24 overflow-y-auto scroll-thin w-full max-h-[80%] p-4">
+              {roundAgents && Object.values(roundAgents).length > 0 ? (
+                Object.values(roundAgents).map((agent) => (
+                  <BuySellGameAvatarInteraction
+                    key={agent.agentData.id}
+                    roomData={roomData}
+                    id={agent.agentData.id}
+                    name={agent.agentData.display_name}
+                    imageUrl={agent.agentData.image_url || ""}
+                    borderColor={agent.agentData.color}
+                    sell={agentPositions[agent.agentData.id]?.sell || 0}
+                    buy={agentPositions[agent.agentData.id]?.buyPool || 0}
+                    hold={agentPositions[agent.agentData.id]?.hold || 0}
+                    variant="full"
+                    betAmount={agentPositions[agent.agentData.id]?.hold || 0}
+                    address={agent.walletAddress}
+                  />
+                ))
+              ) : (
+                <span className="text-gray-400">
+                  No agents available in this round
+                </span>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -432,6 +459,7 @@ export default function RoomDetailPage() {
   const { data: roomData, isLoading: isLoadingRoom } = useRoomDetails(roomId);
   const { data: roundList = [], isLoading: isLoadingRounds } =
     useRoundsByRoom(roomId);
+
   const currentRoundId = roundList[currentRoundIndex]?.id;
 
   const { data: roundAgentMessages, isLoading: isLoadingRoundAgentMessages } =
@@ -750,7 +778,7 @@ export default function RoomDetailPage() {
                         userId: currentUserId,
                         roundId: currentRoundId,
                         roomId: roomId,
-                        timestamp: Date.now()
+                        timestamp: Date.now(),
                       },
                     };
 
