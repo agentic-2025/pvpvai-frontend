@@ -260,7 +260,7 @@ function RoundDetailsAndNavigation({
   const displayRoundNumber = roundList.length - currentRoundIndex;
 
   return (
-    <div className="min-h-[20%] overflow-y-auto scroll-thin bg-card p-3">
+    <div className="scroll-thin bg-card p-3">
       <div className="bg-[#202123] rounded-lgpy-2 flex flex-col items-center justify-center gap-y-4">
         <h2
           className="text-2xl font-bold truncate text-center"
