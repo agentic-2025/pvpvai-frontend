@@ -53,13 +53,14 @@ const useRoomDetails = (roomId: number) => {
   });
 };
 
+// MODIFIED: Updated query to include underlying_contract_round
 const useRoundsByRoom = (roomId: number) => {
   return useQuery({
     queryKey: ["roundsByRoom", roomId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rounds")
-        .select("id, created_at")
+        .select("id, created_at, underlying_contract_round") // ADDED: underlying_contract_round
         .eq("room_id", roomId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -188,6 +189,7 @@ const getAgentPosition = async (
   }
 };
 
+// MODIFIED: Updated to handle bigint conversion properly
 function RoundDetailsAndNavigation({
   roomData,
   roundList,
@@ -198,6 +200,7 @@ function RoundDetailsAndNavigation({
   setCurrentRoundIndex,
   roundAgents,
   participants,
+  contractRoundId, // ADDED: New prop
 }: {
   roomData: Tables<"rooms">;
   roundList: { id: number; created_at: string }[];
@@ -208,17 +211,28 @@ function RoundDetailsAndNavigation({
   setCurrentRoundIndex: (index: number) => void;
   roundAgents: RoundAgentLookup | undefined;
   participants: number;
+  contractRoundId: bigint | null; // ADDED: New prop type
 }) {
-  // Update handlers to match display order
+  // ADDED: Calculate total rounds and current round from contract
+  const contractRound = contractRoundId ? Number(contractRoundId) : 0;
+  const maxRound = contractRound; // CHANGED: Use contract round as source of truth
+
+  // MODIFIED: Navigation handlers now use contract round numbers
   const handlePrevRound = () => {
-    if (currentRoundIndex < roundList.length - 1) {
-      setCurrentRoundIndex(currentRoundIndex + 1);
+    const prevRoundIndex = roundList.findIndex(
+      round => Number(round.underlying_contract_round) === contractRound - 1
+    );
+    if (prevRoundIndex !== -1) {
+      setCurrentRoundIndex(prevRoundIndex);
     }
   };
 
   const handleNextRound = () => {
-    if (currentRoundIndex > 0) {
-      setCurrentRoundIndex(currentRoundIndex - 1);
+    const nextRoundIndex = roundList.findIndex(
+      round => Number(round.underlying_contract_round) === contractRound + 1
+    );
+    if (nextRoundIndex !== -1) {
+      setCurrentRoundIndex(nextRoundIndex);
     }
   };
 
@@ -238,7 +252,14 @@ function RoundDetailsAndNavigation({
     );
   }
 
-  const displayRoundNumber = roundList.length - currentRoundIndex;
+  // MODIFIED: Debug logging now shows contract-based numbers
+  console.log('Round Display Debug:', {
+    contractRound,
+    maxRound,
+    currentIndex: currentRoundIndex,
+    canGoPrev: contractRound > 1,
+    canGoNext: contractRound < maxRound
+  });
 
   return (
     <div className="min-h-[20%] overflow-y-auto scroll-thin bg-card p-3">
@@ -251,19 +272,23 @@ function RoundDetailsAndNavigation({
         </h2>
 
         <div className="flex items-center gap-4">
+          {/* MODIFIED: Update round navigation to consider contract round */}
           <button
             onClick={handlePrevRound}
-            disabled={currentRoundIndex >= roundList.length - 1}
+            // FIXED: Disable based on contract round numbers
+            disabled={contractRound <= 1}
             className="px-2 py-1 bg-gray-700 text-white rounded disabled:opacity-50"
           >
             Prev
           </button>
           <span>
-            Round {displayRoundNumber} / {roundList.length}
+            {/* FIXED: Display using contract numbers */}
+            Round {contractRound} / {maxRound}
           </span>
           <button
             onClick={handleNextRound}
-            disabled={currentRoundIndex <= 0}
+            // FIXED: Disable based on contract round numbers
+            disabled={contractRound >= maxRound}
             className="px-2 py-1 bg-gray-700 text-white rounded disabled:opacity-50"
           >
             Next
@@ -291,6 +316,8 @@ function RoundDetailsAndNavigation({
         <span className="text-xl font-bold bg-[#E97B17] text-white py-2 px-3 rounded">
           {timeLeft}
         </span>
+
+
       </div>
     </div>
   );
@@ -329,11 +356,13 @@ function AgentsDisplay({
   isLoadingAgents,
   roundIdFromContract,
   roomData,
+  isRoundOpen,
 }: {
   roundAgents: RoundAgentLookup | undefined;
   isLoadingAgents: boolean;
   roundIdFromContract: bigint | null;
   roomData: Tables<"rooms">;
+  isRoundOpen: boolean;
 }) {
   const [agentPositions, setAgentPositions] = useState<{ [key: number]: any }>(
     {}
@@ -418,6 +447,7 @@ function AgentsDisplay({
                     variant="full"
                     betAmount={agentPositions[agent.agentData.id]?.hold || 0}
                     address={agent.walletAddress}
+                    isRoundOpen={isRoundOpen} // ADDED: Pass isRoundOpen 
                   />
                 ))
               ) : (
@@ -441,6 +471,7 @@ export default function RoomDetailPage() {
 
   // Timer states
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [formattedTime, setFormattedTime] = useState<string>("--:--:--");
   // Separate states for public chat and agent messages
   const [messages, setMessages] = useState<
@@ -645,6 +676,9 @@ export default function RoomDetailPage() {
     null
   );
 
+  // ADDED: New state for tracking round state from contract
+  const [roundState, setRoundState] = useState<number | null>(null);
+
   useEffect(() => {
     if (!roomData) return;
 
@@ -666,6 +700,20 @@ export default function RoomDetailPage() {
     }
     const updateTimer = async () => {
       if (!roomData || !roundIdFromContract) return;
+
+      // ADDED: Fetch round state from contract
+      try {
+        const state = await readContract(wagmiConfig, {
+          abi: roomAbi,
+          address: getAddress(roomData.contract_address || ""),
+          functionName: "getRoundState",
+          args: [roundIdFromContract],
+        });
+        setRoundState(state);
+      } catch (error) {
+        console.error("Error fetching round state:", error);
+      }
+
       const roundEndTimeFetched = await getRoundEndTime(
         roomData.contract_address || "",
         roundIdFromContract
@@ -712,6 +760,39 @@ export default function RoomDetailPage() {
     }
   }, [timeLeft]);
 
+  // MODIFIED: Update round tracking logic with proper type handling
+  useEffect(() => {
+    if (!roomData || !roundList || !roundIdFromContract) return;
+
+    // ADDED: Log the values for debugging
+    console.log('Contract Round Raw:', roundIdFromContract);
+    console.log('Contract Round Number:', Number(roundIdFromContract));
+    console.log('Available Rounds:', roundList.map(r => ({
+      id: r.id,
+      underlying: r.underlying_contract_round
+    })));
+
+    // Find the round that matches the contract round ID
+    const activeRoundIndex = roundList.findIndex((round) => {
+      // FIXED: Ensure consistent number conversion for comparison
+      const contractRound = Number(roundIdFromContract);
+      const underlyingRound = round.underlying_contract_round ? Number(round.underlying_contract_round) : null;
+      
+      // ADDED: Debug log for round matching
+      console.log(`Comparing contract round ${contractRound} with underlying round ${underlyingRound}`);
+      
+      return underlyingRound === contractRound;
+    });
+
+    // Update current round index if found
+    if (activeRoundIndex !== -1) {
+      console.log(`Matched round index: ${activeRoundIndex}`);
+      setCurrentRoundIndex(activeRoundIndex);
+    } else {
+      console.warn(`No matching round found for contract round: ${Number(roundIdFromContract)}`);
+    }
+  }, [roundIdFromContract, roundList]);
+
   if (isLoadingRoom)
     return (
       <div className="flex items-center justify-center h-screen">
@@ -735,6 +816,7 @@ export default function RoomDetailPage() {
               isLoadingAgents={isLoadingAgents}
               roundIdFromContract={roundIdFromContract}
               roomData={roomData}
+              isRoundOpen={roundState === 1} // ADDED: Pass round state to AgentsDisplay
             />
             {/* Agent Chat: shows only agent messages */}
             <div className="flex-1 bg-card rounded-lg overflow-hidden w-full">
@@ -759,6 +841,7 @@ export default function RoomDetailPage() {
               setCurrentRoundIndex={setCurrentRoundIndex}
               roundAgents={roundAgents}
               participants={participants}
+              contractRoundId={roundIdFromContract} // ADDED: Pass contract round ID
             />
             {/* Public Chat (currently commented out) */}
             <div className="flex flex-col bg-card rounded-lg p-3 overflow-y-auto h-full">

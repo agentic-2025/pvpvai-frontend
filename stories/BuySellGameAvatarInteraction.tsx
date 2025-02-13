@@ -1,4 +1,3 @@
-
 import Link from "next/link";
 import { FC } from "react";
 import { AgentAvatarInteraction } from "./AgentAvatarInteraction";
@@ -19,6 +18,7 @@ interface BuySellGameAvatarInteractionProps {
   showName?: boolean;
   address: string;
   roomData: Tables<"rooms">;
+  isRoundOpen: boolean; // ADDED: New prop for round state
 }
 
 export const BuySellGameAvatarInteraction: FC<
@@ -35,7 +35,8 @@ export const BuySellGameAvatarInteraction: FC<
   hold,
   showName = true,
   address,
-  roomData
+  roomData,
+  isRoundOpen, // ADDED: Destructure new prop
 }) => {
 
   return (
@@ -49,6 +50,7 @@ export const BuySellGameAvatarInteraction: FC<
           betAmount={betAmount}
           betType={betType as "buy" | "hold" | "sell" | null}
           agentAddress={address}
+          isRoundOpen={isRoundOpen} // ADDED: Pass round state to child component
         />
         {showName && (
           <Link
