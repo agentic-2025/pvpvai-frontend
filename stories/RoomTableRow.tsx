@@ -23,9 +23,9 @@ export function RoomTableRow({
   showToken,
   className = "hover:bg-secondary/20",
 }: RoomTableRowProps) {
-  const timer = formatTimeLeft(
-    new Date(room.round_ends_on || "000000").getTime() / 1000
-  ); // Ensure the format is correct
+  // const timer = formatTimeLeft(
+  //   new Date(room.round_ends_on || "000000").getTime() / 1000
+  // ); // Ensure the format is correct
   const roomType = roomTypeMapping[room.type_id];
   return (
     <TableRow style={style} className={className}>
@@ -81,9 +81,9 @@ export function RoomTableRow({
         </TableCell>
       ) : null}
 
-      <TableCell className="text-lg text-center">
+      {/* <TableCell className="text-lg text-center">
         <span style={{ color: timer.color }}>{timer.text}</span>
-      </TableCell>
+      </TableCell> */}
 
       <TableCell className="pr-6">
         <div className="flex -space-x-2">

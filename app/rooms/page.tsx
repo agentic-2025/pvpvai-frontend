@@ -242,9 +242,9 @@ const RoomsPage: FC = () => {
                       Token
                     </TableHead>
                   )}
-                  <TableHead className="text-xl font-bold text-gray-700 dark:text-gray-200 text-center py-4 w-[150px]">
+                  {/* <TableHead className="text-xl font-bold text-gray-700 dark:text-gray-200 text-center py-4 w-[150px]">
                     Next Round
-                  </TableHead>
+                  </TableHead> */}
                   <TableHead className="text-xl font-bold text-gray-700 dark:text-gray-200 pr-6 py-4 w-[200px]">
                     Agents
                   </TableHead>
