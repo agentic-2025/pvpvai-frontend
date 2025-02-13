@@ -466,7 +466,6 @@ export default function RoomDetailPage() {
     useRoundsByRoom(roomId);
 
   const currentRoundId = roundList[currentRoundIndex]?.id;
-  console.log("currentRoundId", currentRoundId);
 
   const { data: roundAgentMessages, isLoading: isLoadingRoundAgentMessages } =
     useRoundAgentMessages(currentRoundId);
@@ -673,13 +672,13 @@ export default function RoomDetailPage() {
     if (!roomData || !roomData.room_config || !roundList.length) return;
 
     // Use the earliest (first) round's created_at as the baseline.
-    const baselineRoundCreatedAt = roundList[roundList.length - 1]?.created_at;
+    const currentRoundCreatedAt = roundList[roundList.length - 1]?.created_at;
     const roundDuration = roomData.room_config.round_duration;
-    if (!baselineRoundCreatedAt) return;
+    if (!currentRoundCreatedAt) return;
 
     const updateTimer = () => {
       const { timeLeft } = calculateCurrentRoundAndCountdown(
-        baselineRoundCreatedAt,
+        currentRoundCreatedAt,
         roundDuration
       );
 
