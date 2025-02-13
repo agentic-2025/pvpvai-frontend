@@ -55,7 +55,7 @@ export const GMChatLine: FC<GMChatLineProps> = ({ message }) => {
   return (
     <AgentChatLine
       agentId={gmAgent}
-      agentName={gmData.display_name}
+      agentName={`GM`}
       agentImageUrl={gmData.image_url}
       agentBorderColor={gmColor}
       message={messageContent}

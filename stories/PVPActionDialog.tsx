@@ -37,9 +37,13 @@ function validatePvpInput(
   poisonReplace?: string
 ): { valid: boolean; message?: string } {
   if (verb.toLowerCase() === "attack") {
-    const words = input.trim().split(/\s+/).filter(Boolean);
-    if (words.length < 4 || words.length > 5) {
-      return { valid: false, message: "Please enter between 4 and 5 words." };
+    if (input.length === 0) {
+      return { valid: false, message: "Please enter a message." };
+    } else if (input.length > 128) {
+      return {
+        valid: false,
+        message: "Message must be less than 128 characters.",
+      };
     }
   } else if (verb.toLowerCase() === "poison") {
     if (!poisonFind || !poisonReplace) {
@@ -109,14 +113,14 @@ export function PvpActionDialog({
       switch (verb.toLowerCase()) {
         case "attack":
           parameters = {
-            target: parseInt(address),
+            target: address,
             message: input,
           } as PvpAttackActionType["parameters"];
           break;
 
         case "poison":
           parameters = {
-            target: parseInt(address),
+            target: address,
             duration: 30, // You might want to make this configurable
             find: poisonFind,
             replace: poisonReplace,
@@ -126,14 +130,14 @@ export function PvpActionDialog({
 
         case "silence":
           parameters = {
-            target: parseInt(address),
+            target: address,
             duration: 30,
           } as PvpSilenceStatusType["parameters"];
           break;
 
         case "deafen":
           parameters = {
-            target: parseInt(address),
+            target: address,
             duration: 30,
           } as PvpDeafenStatusType["parameters"];
           break;
