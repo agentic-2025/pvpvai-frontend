@@ -38,7 +38,7 @@ export const PvpStatusEffects: FC<{ statuses: Status[] }> = ({ statuses }) => {
         <div
           key={idx}
           // Comment: show that we added countdown timer
-          className="text-white text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1"
+          className="text-white text-s px-2 py-0.5 rounded-full font-large flex items-center gap-1"
           title={`Applied by ${status.instigator}`}
           style={{color: status.verb.toUpperCase() === "SILENCE" ? "#FFF": "#000", backgroundColor: actionColors[status.verb.toUpperCase() as "POISON" | "SILENCE" | "DEAFEN" | "ATTACK"].darkText}}
     

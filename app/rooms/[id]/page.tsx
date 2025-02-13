@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import Loader from "@/components/loader";
@@ -36,6 +37,11 @@ import { getAddress, PublicClient } from "viem";
 import { readContract } from "viem/actions";
 import { useAccount, usePublicClient } from "wagmi";
 import { z } from "zod";
+import { useRoundTransitions, RoundState } from '@/hooks/useRoundTransitions';
+import { cn } from "@/lib/utils";
+import { useQueryClient } from '@tanstack/react-query';
+import { useControlState } from '@/hooks/useControlState';
+import { QueryFilters } from '@tanstack/react-query';
 
 // --- Query Hooks ---
 const useRoomDetails = (roomId: number) => {
@@ -139,21 +145,21 @@ const useRoundAgents = (roundId: number) => {
     enabled: !!roundId,
   });
 };
-
-const fetchCurrentRoundId = async (contractAddress: string) => {
-  try {
-    console.log("Fetching current contract round ID");
-    const result = await readContract(wagmiConfig, {
-      abi: roomAbi,
-      address: getAddress(contractAddress),
-      functionName: "currentRoundId",
-    });
-    return result;
-  } catch (error) {
-    console.error("Error fetching current round ID:", error);
-    return null;
-  }
-};
+// moved to useRoundTransitions.ts
+// const fetchCurrentRoundId = async (contractAddress: string) => {
+//   try {
+//     console.log("Fetching current contract round ID");
+//     const result = await readContract(wagmiConfig, {
+//       abi: roomAbi,
+//       address: getAddress(contractAddress),
+//       functionName: "currentRoundId",
+//     });
+//     return result;
+//   } catch (error) {
+//     console.error("Error fetching current round ID:", error);
+//     return null;
+//   }
+// };
 
 // const getRoundEndTime = async (contractAddress: string, roundId: bigint) => {
 //   try {
@@ -278,6 +284,7 @@ function RoundDetailsAndNavigation({
   participants,
   contractRoundId, // ADDED: New prop
   onRoundSelect, // ADDED: Callback to handle round selection
+  roundState, // ADDED: New prop for round state
 }: {
   roomData: Tables<"rooms">;
   roundList: RoundWithContract[]; // MODIFIED: Updated type
@@ -290,6 +297,7 @@ function RoundDetailsAndNavigation({
   participants: number;
   contractRoundId: bigint | null; // ADDED: New prop type
   onRoundSelect: (roundId: bigint) => void; // ADDED: New prop type
+  roundState: RoundState; // ADDED: Type for round state
 }) {
   // MODIFIED: Navigation handlers to use database rounds
   const handlePrevRound = () => {
@@ -343,12 +351,27 @@ function RoundDetailsAndNavigation({
   return (
     <div className="min-h-[20%] overflow-y-auto scroll-thin bg-card p-3">
       <div className="bg-[#202123] rounded-lgpy-2 flex flex-col items-center justify-center gap-y-4">
-        <h2
-          className="text-2xl font-bold truncate text-center"
-          style={{ color: roomData.color || "inherit" }}
-        >
-          {roomData.name}
-        </h2>
+        {/* MODIFIED: Added container for name + badge */}
+        <div className="flex items-center gap-2">
+          <h2
+            className="text-2xl font-bold truncate text-center"
+            style={{ color: roomData.color || "inherit" }}
+          >
+            {roomData.name}
+          </h2>
+          
+          {/* ADDED: Round state badge */}
+          <span className={cn(
+            "text-sm px-3 py-1 rounded-full font-medium",
+            roundState === RoundState.OPEN ? "bg-green-500/20 text-green-300" :
+            roundState === RoundState.CLOSED ? "bg-red-500/20 text-red-300" :
+            "bg-gray-500/20 text-gray-300"
+          )}>
+            {roundState === RoundState.OPEN ? "OPEN" :
+             roundState === RoundState.CLOSED ? "CLOSED" :
+             "UNKNOWN"}
+          </span>
+        </div>
 
         <div className="flex items-center gap-4">
           {/* MODIFIED: Update round navigation to consider contract round */}
@@ -438,6 +461,7 @@ function AgentsDisplay({
   isRoundOpen,
   selectedRoundId, // ADDED: Include selectedRoundId prop
   currentContractRound, // ADDED: New prop type
+  isTransitioning,
 }: {
   roundAgents: RoundAgentLookup | undefined;
   isLoadingAgents: boolean;
@@ -446,6 +470,7 @@ function AgentsDisplay({
   isRoundOpen: boolean;
   selectedRoundId: bigint | null; // ADDED: Type for selectedRoundId
   currentContractRound: bigint | null; // ADDED: New prop type
+  isTransitioning: boolean;
 }) {
   const [agentPositions, setAgentPositions] = useState<{ [key: number]: any }>(
     {}
@@ -520,8 +545,28 @@ function AgentsDisplay({
     isActive: isActiveRound
   });
 
+  // ADDED: Use control state hook
+  const isControlsEnabled = useControlState(
+    isRoundOpen,
+    selectedRoundId,
+    currentContractRound
+  );
+
   return (
-    <div className="w-full h-[40%] bg-card rounded-lg p-3">
+    <div className={cn(
+      "w-full h-[60%] bg-card rounded-lg p-3",
+      !isControlsEnabled && "pointer-events-none opacity-70"
+    )}>
+      {/* Add transition overlay */}
+      {isTransitioning && (
+        <div className="absolute inset-0 z-10 bg-black/50 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <Loader />
+            <p className="text-lg text-white">Transitioning to next round...</p>
+          </div>
+        </div>
+      )}
+      
       <div className="bg-[#202123] flex flex-col items-center justify-center w-full h-full rounded-md">
         {isLoadingAgents ? (
           <AgentsSkeleton />
@@ -571,6 +616,8 @@ function AgentsDisplay({
                     isRoundOpen={isActiveRound} // FIXED: Only enable controls for current round when open
                     // ADDED: Pass agent's PVP statuses
                     pvpStatuses={agentPvpStatuses[agent.agentData.id] || []}
+                    isRoundActive={isRoundOpen}
+                    roundState={RoundState.OPEN}
                   />
                 ))
               ) : (
@@ -795,29 +842,51 @@ export default function RoomDetailPage() {
   // we use a two‑tier approach:
   // 1. A 1‑second interval that decrements the local timer.
   // 2. A 5‑second interval that re‑fetches the round end time from the blockchain.
-  const [roundIdFromContract, setRoundIdFromContract] = useState<bigint | null>(
-    null
-  );
+  // MODIFIED: Rename hook state to avoid naming conflict
+  const {
+    currentRoundId: roundIdFromContract,
+    roundState: contractRoundState, // Renamed from roundState
+    hasTransitioned,
+    isRoundActive,
+    acknowledgeTransition
+  } = useRoundTransitions(roomData?.contract_address || null);
+
+  // MODIFIED: Rename local state to avoid conflict
+  const [localRoundState, setLocalRoundState] = useState<number | null>(null); // Renamed from roundState
+
+  // Add effect to handle round transitions
+  useEffect(() => {
+    if (hasTransitioned) {
+      console.log("Round transition detected!", {
+        contractState: contractRoundState,
+        localState: localRoundState
+      });
+      
+      // Clear messages for the new round
+      setMessages([]);
+      setAiChatMessages([]);
+      
+      // Reset local round state
+      setLocalRoundState(null);
+      
+      // Show transition toast
+      toast({
+        title: "Round Updated",
+        description: contractRoundState === RoundState.OPEN ? 
+          "New round has started!" : 
+          "Current round has ended.",
+        duration: 5000,
+      });
+      
+      acknowledgeTransition();
+    }
+  }, [hasTransitioned, contractRoundState, localRoundState, toast, acknowledgeTransition]);
 
   // ADDED: New state for tracking round state from contract
   const [roundState, setRoundState] = useState<number | null>(null);
 
   // MODIFIED: Remove selectedRoundId state since we use roundIdFromContract
   const [selectedRoundId, setSelectedRoundId] = useState<bigint | null>(null);
-
-  useEffect(() => {
-    if (!roomData) return;
-
-    const fetchRoundIdFromContract = async () => {
-      const roundIdFromContract = await fetchCurrentRoundId(
-        roomData.contract_address || ""
-      );
-
-      console.log("roundIdFromContract", roundIdFromContract);
-      setRoundIdFromContract(roundIdFromContract);
-    };
-    fetchRoundIdFromContract();
-  }, [currentRoundId, roomData]);
 
   useEffect(() => {
     if (!publicClient) {
@@ -974,6 +1043,105 @@ export default function RoomDetailPage() {
     }
   }, [timeLeft]);
 
+  // ADDED: Query client for cache invalidation
+  const queryClient = useQueryClient();
+  
+  // ADDED: Transition state management
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  // ADDED: Centralized round transition handler
+  const handleRoundTransition = async () => {
+    setIsTransitioning(true);
+    try {
+      // Update selected round to match contract
+      setSelectedRoundId(roundIdFromContract);
+      
+      // Clear message states
+      setMessages([]);
+      setAiChatMessages([]);
+      
+      // FIXED: Properly type query invalidation
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['roundAgents']
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['roundUserMessages']
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['roundAgentMessages']
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['roundsByRoom']
+        })
+      ]);
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      toast({
+        title: "New Round Started",
+        description: "Moving to latest round...",
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('Error during round transition:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update round data. Please refresh.",
+      });
+    } finally {
+      setIsTransitioning(false);
+    }
+  };
+
+  // ADDED: Watch for round transitions
+  useEffect(() => {
+    let prevRoundId = roundIdFromContract;
+
+    const checkRoundTransition = async () => {
+      if (prevRoundId !== null && 
+          roundIdFromContract !== null && 
+          prevRoundId !== roundIdFromContract) {
+        console.log('[Round Transition]', {
+          from: prevRoundId.toString(),
+          to: roundIdFromContract.toString()
+        });
+        await handleRoundTransition();
+      }
+      prevRoundId = roundIdFromContract;
+    };
+
+    checkRoundTransition();
+  }, [roundIdFromContract]);
+
+  // MODIFIED: Effect to handle round transitions and selection
+  useEffect(() => {
+    if (!roomData || !roundList || !roundIdFromContract) return;
+
+    // Debug current state
+    console.log('[Round Selection Debug]', {
+      currentContract: roundIdFromContract.toString(),
+      available: roundList.map(r => r.underlying_contract_round),
+      selectedRound: selectedRoundId?.toString()
+    });
+
+    // Always select the current contract round
+    setSelectedRoundId(roundIdFromContract);
+
+    // Find matching round in our list
+    const activeRoundIndex = roundList.findIndex((round) => 
+      Number(round.underlying_contract_round) === Number(roundIdFromContract)
+    );
+
+    if (activeRoundIndex !== -1) {
+      setCurrentRoundIndex(activeRoundIndex);
+    } else {
+      // If round not found in list, create new round entry
+      console.warn('Current round not in list - may need to fetch latest rounds');
+    }
+  }, [roundIdFromContract, roundList]);
+
   if (isLoadingRoom)
     return (
       <div className="flex items-center justify-center h-screen">
@@ -987,90 +1155,104 @@ export default function RoomDetailPage() {
       </div>
     );
   return (
-    <div className="flex items-center justify-center w-full">
-      <div className="max-w-screen-2xl w-full mx-auto p-4 bg-secondary/50 rounded-xl">
-        <div className="w-full flex gap-6 h-[calc(100vh-10rem)]">
-          {/* Left Section: Room Info, Agents, and Agent Chat */}
-          <div className="w-[65%] flex flex-col gap-6">
-            <AgentsDisplay
-              roundAgents={roundAgents}
-              isLoadingAgents={isLoadingAgents}
-              roundIdFromContract={roundIdFromContract}
-              roomData={roomData}
-              isRoundOpen={roundState === 1}
-              selectedRoundId={selectedRoundId} // ADDED: Pass selected round ID
-              currentContractRound={roundIdFromContract} // ADDED: Pass current contract round
-            />
-            {/* Agent Chat: shows only agent messages */}
-            <div className="flex-1 bg-card rounded-lg overflow-hidden w-full">
-              <AgentChat
-                className="h-full min-w-full bg-[#202123] p-3"
-                showHeader={false}
-                messages={[...(roundAgentMessages || []), ...aiChatMessages]}
-                roomId={roomId}
-                loading={isLoadingRoundAgentMessages}
-                roundId={currentRoundId}
-              />
-            </div>
-          </div>
-          {/* Right Section: Room Details, Round Navigation, and Public Chat */}
-          <div className="w-[35%] flex flex-col gap-6">
-            <RoundDetailsAndNavigation
-              roomData={roomData}
-              roundList={roundList}
-              currentRoundIndex={currentRoundIndex}
-              timeLeft={formattedTime} // <-- Formatted string (e.g., "04:32")
-              isLoadingRoom={isLoadingRoom}
-              isLoadingRounds={isLoadingRounds}
-              setCurrentRoundIndex={setCurrentRoundIndex}
-              roundAgents={roundAgents}
-              participants={participants}
-              contractRoundId={roundIdFromContract} // ADDED: Pass contract round ID
-              onRoundSelect={handleRoundSelect} // ADDED: Pass round selection handler
-            />
-            {/* Public Chat (currently commented out) */}
-            <div className="flex flex-col bg-card rounded-lg p-3 overflow-y-auto h-full">
-              <PublicChat
-                messages={[...(roundPublicChatMessages || []), ...messages]}
-                className="h-full"
-                currentUserAddress={String(currentUserId)}
-                loading={isLoadingPublicChatMessages}
-                onSendMessage={(message) => {
-                  if (readyState === WebSocket.OPEN) {
-                    const messagePayload = {
-                      messageType: WsMessageTypes.PUBLIC_CHAT,
-                      sender: walletAddress,
-                      signature: "signature",
-                      content: {
-                        text: message,
-                        userId: currentUserId,
-                        roundId: currentRoundId,
-                        roomId: roomId,
-                        timestamp: Date.now(),
-                      },
-                    };
-
-                    sendMessage(JSON.stringify(messagePayload));
-                    console.log("Message sent:", messagePayload);
-                  } else {
-                    console.error(
-                      "WebSocket is not open. Cannot send message."
-                    );
-                    toast({
-                      variant: "destructive",
-                      title: "Error",
-                      description:
-                        "Unable to send message. WebSocket is not connected.",
-                    });
-                  }
-                }}
-              />
-            </div>
+    <div className="relative">
+      {/* ADDED: Transition overlay */}
+      {isTransitioning && (
+        <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-card p-6 rounded-lg text-center">
+            <Loader />
+            <p className="mt-4">Transitioning to new round...</p>
           </div>
         </div>
-        <div className="text-sm text-gray-400 text-center">
-          Internal round id: {currentRoundId}, contract round id:{" "}
-          {roundIdFromContract}
+      )}
+      
+      <div className="flex items-center justify-center w-full">
+        <div className="max-w-screen-2xl w-full mx-auto p-4 bg-secondary/50 rounded-xl">
+          <div className="w-full flex gap-6 h-[calc(100vh-10rem)]">
+            {/* Left Section: Room Info, Agents, and Agent Chat */}
+            <div className="w-[65%] flex flex-col gap-6">
+              <AgentsDisplay
+                roundAgents={roundAgents}
+                isLoadingAgents={isLoadingAgents}
+                roundIdFromContract={roundIdFromContract}
+                roomData={roomData}
+                isRoundOpen={contractRoundState === RoundState.OPEN} // Use contract state
+                selectedRoundId={selectedRoundId} // ADDED: Pass selected round ID
+                currentContractRound={roundIdFromContract} // ADDED: Pass current contract round
+                isTransitioning={isTransitioning}
+              />
+              {/* Agent Chat: shows only agent messages */}
+              <div className="flex-1 bg-card rounded-lg overflow-hidden w-full">
+                <AgentChat
+                  className="h-full min-w-full bg-[#202123] p-3"
+                  showHeader={false}
+                  messages={[...(roundAgentMessages || []), ...aiChatMessages]}
+                  roomId={roomId}
+                  loading={isLoadingRoundAgentMessages}
+                  roundId={currentRoundId}
+                />
+              </div>
+            </div>
+            {/* Right Section: Room Details, Round Navigation, and Public Chat */}
+            <div className="w-[35%] flex flex-col gap-6">
+              <RoundDetailsAndNavigation
+                roomData={roomData}
+                roundList={roundList}
+                currentRoundIndex={currentRoundIndex}
+                timeLeft={formattedTime} // <-- Formatted string (e.g., "04:32")
+                isLoadingRoom={isLoadingRoom}
+                isLoadingRounds={isLoadingRounds}
+                setCurrentRoundIndex={setCurrentRoundIndex}
+                roundAgents={roundAgents}
+                participants={participants}
+                contractRoundId={roundIdFromContract} // ADDED: Pass contract round ID
+                onRoundSelect={handleRoundSelect} // ADDED: Pass round selection handler
+                roundState={contractRoundState} // ADDED: Pass round state to component
+              />
+              {/* Public Chat (currently commented out) */}
+              <div className="flex flex-col bg-card rounded-lg p-3 overflow-y-auto h-full">
+                <PublicChat
+                  messages={[...(roundPublicChatMessages || []), ...messages]}
+                  className="h-full"
+                  currentUserAddress={String(currentUserId)}
+                  loading={isLoadingPublicChatMessages}
+                  onSendMessage={(message) => {
+                    if (readyState === WebSocket.OPEN) {
+                      const messagePayload = {
+                        messageType: WsMessageTypes.PUBLIC_CHAT,
+                        sender: walletAddress,
+                        signature: "signature",
+                        content: {
+                          text: message,
+                          userId: currentUserId,
+                          roundId: currentRoundId,
+                          roomId: roomId,
+                          timestamp: Date.now(),
+                        },
+                      };
+
+                      sendMessage(JSON.stringify(messagePayload));
+                      console.log("Message sent:", messagePayload);
+                    } else {
+                      console.error(
+                        "WebSocket is not open. Cannot send message."
+                      );
+                      toast({
+                        variant: "destructive",
+                        title: "Error",
+                        description:
+                          "Unable to send message. WebSocket is not connected.",
+                      });
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="text-sm text-gray-400 text-center">
+            Internal round id: {currentRoundId}, contract round id:{" "}
+            {roundIdFromContract}
+          </div>
         </div>
       </div>
     </div>

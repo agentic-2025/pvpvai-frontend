@@ -5,6 +5,7 @@ import { BullBearHoldRatioBar } from "./BullBearHoldRatioBar";
 import { Tables } from "@/lib/database.types";
 import { cn } from "@/lib/utils";
 import { PvpStatusEffects } from "./PvpStatusEffects"; // ADDED: import
+import { RoundState } from '@/hooks/useRoundTransitions';
 
 interface BuySellGameAvatarInteractionProps {
   id: number;
@@ -28,6 +29,8 @@ interface BuySellGameAvatarInteractionProps {
     endTime: number;
     parameters: string;
   }[];
+  isRoundActive: boolean;
+  roundState: RoundState;
 }
 
 export const BuySellGameAvatarInteraction: FC<
@@ -47,13 +50,24 @@ export const BuySellGameAvatarInteraction: FC<
   roomData,
   isRoundOpen, // ADDED: Destructure new prop
   pvpStatuses, // from contract
+  isRoundActive,
+  roundState,
 }) => {
+  // Debug render state
+  console.log('[Avatar Interaction]', {
+    name,
+    isRoundActive,
+    roundState,
+    timestamp: new Date().toISOString()
+  });
+
   return (
-    <div className="flex flex-col gap-1 relative">
-      {/* ADDED: Show PVP statuses above main avatar */}
-      <div className="absolute top-0 right-0 m-2">
-        <PvpStatusEffects statuses={pvpStatuses} />
-      </div>
+    <div className={cn(
+      "flex flex-col gap-1 relative",
+      // Visual feedback for inactive rounds
+      !isRoundActive && "opacity-50 cursor-not-allowed" 
+    )}>
+
 
       <div
         className={cn(
