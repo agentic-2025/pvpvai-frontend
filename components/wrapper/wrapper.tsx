@@ -18,11 +18,15 @@ export const wagmiConfig = createPublicClient({
   ),
 });
 
-export const walletClient = createWalletClient({
-  chain: baseSepolia,
-  transport: custom(window.ethereum),
-});
+// NEW: Move wallet client creation inside a useEffect to avoid SSR issues
+export let walletClient: ReturnType<typeof createWalletClient> | undefined;
 
+if (typeof window !== 'undefined') {
+  walletClient = createWalletClient({
+    chain: baseSepolia,
+    transport: custom(window.ethereum),
+  });
+}
 export const config = getDefaultConfig({
   appName: "PvPvAI",
   projectId: `${process.env.NEXT_PUBLIC_RAINBOWKIT_PROJECT_ID}`,

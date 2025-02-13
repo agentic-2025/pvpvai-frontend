@@ -28,7 +28,9 @@ import { AgentAvatar } from "@/stories/AgentAvatar";
 import { AgentChat } from "@/stories/AgentChat";
 import { BuySellGameAvatarInteraction } from "@/stories/BuySellGameAvatarInteraction";
 import { PublicChat } from "@/stories/PublicChat";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { get } from "http";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import useWebSocket from "react-use-websocket";
@@ -59,7 +61,7 @@ const useRoundsByRoom = (roomId: number) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rounds")
-        .select("id, created_at")
+        .select("id, created_at, underlying_contract_round")  // Add underlying_contract_round
         .eq("room_id", roomId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -120,7 +122,7 @@ const useRoundAgents = (roundId: number) => {
   });
 };
 
-const fetchCurrentRoundId = async (contractAddress: string) => {
+const fetchCurrentRoundId = async (contractAddress: string) => { // should be the same as underlying_contract_round in DB
   try {
     console.log("Fetching current contract round ID");
     const result = await readContract(wagmiConfig, {
@@ -135,6 +137,21 @@ const fetchCurrentRoundId = async (contractAddress: string) => {
   }
 };
 
+const getRoundStartTime = async (contractAddress: string, roundId: bigint) => {
+  try {
+    const result = await readContract(wagmiConfig, {
+      abi: roomAbi,
+      address: getAddress(contractAddress),
+      functionName: "getRoundStartTime",
+      args: [BigInt(roundId)],
+    });
+    return Number(result);
+  } catch (error) {
+    console.error("Error fetching round start time:", error);
+    return null;
+  }
+};
+
 const getRoundEndTime = async (contractAddress: string, roundId: bigint) => {
   try {
     const result = await readContract(wagmiConfig, {
@@ -142,6 +159,40 @@ const getRoundEndTime = async (contractAddress: string, roundId: bigint) => {
       address: getAddress(contractAddress),
       functionName: "getRoundEndTime",
       args: [BigInt(roundId)],
+    });
+    return Number(result);
+  } catch (error) {
+    console.error("Error fetching round end time:", error);
+    return null;
+  }
+};
+
+// const getRoundDuration = async (
+//   contractAddress: string, 
+//   publicClient: PublicClient | undefined
+// ) => {
+//   if (!publicClient) return null;
+//   try {
+//     const result = await readContract(publicClient, {
+//       abi: roomAbi,
+//       address: getAddress(contractAddress),
+//       functionName: "roundDuration",
+//     });
+//     console.log("Round duration from contract:", result);
+//     return Number(result);
+//   } catch (error) {
+//     console.error("Error fetching round duration:", error);
+//     return null;
+//   }
+// };
+
+const getRoundDuration = async (contractAddress: string) => {
+  try {
+    const result = await readContract(wagmiConfig, {
+      abi: roomAbi,
+      address: getAddress(contractAddress),
+      functionName: "roundDuration",
+      args: [],
     });
     return Number(result);
   } catch (error) {
@@ -190,7 +241,7 @@ const getAgentPosition = async (
 
 function RoundDetailsAndNavigation({
   roomData,
-  roundList,
+  roundList,  // UPDATE Now expects underlying_contract_round in each round
   currentRoundIndex,
   timeLeft,
   isLoadingRoom,
@@ -200,7 +251,7 @@ function RoundDetailsAndNavigation({
   participants,
 }: {
   roomData: Tables<"rooms">;
-  roundList: { id: number; created_at: string }[];
+  roundList: { id: number; created_at: string; underlying_contract_round: number }[]; // UPDATE Added underlying_contract_round
   currentRoundIndex: number;
   timeLeft: string | null;
   isLoadingRoom: boolean;
@@ -238,7 +289,9 @@ function RoundDetailsAndNavigation({
     );
   }
 
-  const displayRoundNumber = roundList.length - currentRoundIndex;
+  const currentRound = roundList[currentRoundIndex];
+  const contractRoundNumber = currentRound?.underlying_contract_round || 0;
+  console.log("All rounds:", roundList);
 
   return (
     <div className="min-h-[20%] overflow-y-auto scroll-thin bg-card p-3">
@@ -259,7 +312,7 @@ function RoundDetailsAndNavigation({
             Prev
           </button>
           <span>
-            Round {displayRoundNumber} / {roundList.length}
+            Round {contractRoundNumber} {/* UPDATE Changed from calculated number to contract round number */}
           </span>
           <button
             onClick={handleNextRound}
@@ -381,7 +434,8 @@ function AgentsDisplay({
               <span className="text-gray-400">Agents are discussing:</span>
               {(() => {
                 try {
-                  const token = roomData.room_config?.token;
+                  const config = typeof roomData.room_config === 'object' ? roomData.room_config : JSON.parse(roomData.room_config as string);
+                  const token = config?.token;
                   if (!token)
                     return <div>No token specified in room config</div>;
 
@@ -439,8 +493,15 @@ export default function RoomDetailPage() {
   const currentUserId = 1; // TODO: Do not hardcode me
   const publicClient = usePublicClient();
 
+  // Add state for tracking the last seen round
+  const [lastSeenContractRound, setLastSeenContractRound] = useState<number | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const queryClient = useQueryClient();
+
+
   // Timer states
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [formattedTime, setFormattedTime] = useState<string>("--:--:--");
   // Separate states for public chat and agent messages
   const [messages, setMessages] = useState<
@@ -666,6 +727,11 @@ export default function RoomDetailPage() {
     }
     const updateTimer = async () => {
       if (!roomData || !roundIdFromContract) return;
+      const roundStartTimeFetched = await getRoundStartTime(
+        roomData.contract_address || "",
+        roundIdFromContract
+      );
+      const contractAddress = roomData.contract_address || "";
       const roundEndTimeFetched = await getRoundEndTime(
         roomData.contract_address || "",
         roundIdFromContract
@@ -676,7 +742,20 @@ export default function RoomDetailPage() {
       const currentTimestamp = await fetchCurrentBlockTimestamp(publicClient);
       if (!currentTimestamp) return;
 
+      // UPDATE: Make the duration check async
+      const checkRoundDuration = async () => {
+        const roundDuration = await getRoundDuration(
+          roomData?.contract_address || "",
+          // publicClient // getRoundDurationv1 uses client v2 not, both give 0
+        );
+        console.log("XXX Round Duration:", roundDuration);
+      };
+      
+      checkRoundDuration();
+
       console.log("Contract Round ID:", roundIdFromContract);
+      console.log("Contract Address:", contractAddress  );
+      console.log("Round Start Time:", roundStartTimeFetched);
       console.log("Round End Time:", roundEndTimeFetched);
       console.log("Current Timestamp:", currentTimestamp);
       console.log("Date.now()", Date.now());
@@ -705,6 +784,63 @@ export default function RoomDetailPage() {
       clearInterval(refreshInterval);
     };
   }, [currentRoundIndex, publicClient, roomData, roundIdFromContract]); // Only re-run when currentRoundIndex changes
+
+  // UPDATEAdd effect to sync currentRoundIndex with contract round
+  useEffect(() => {
+    if (!roundList || !roundIdFromContract) return;
+
+    // Find matching round index based on contract round number
+    const contractRoundNumber = Number(roundIdFromContract);
+    const matchingIndex = roundList.findIndex(
+      round => round.underlying_contract_round === contractRoundNumber
+    );
+
+    // Update current index if needed
+    if (matchingIndex !== -1 && matchingIndex !== currentRoundIndex) {
+      setCurrentRoundIndex(matchingIndex);
+    }
+  }, [roundList, roundIdFromContract]);
+
+  // Update round transition effect to use underlying_contract_round
+  useEffect(() => {
+    if (!roundList || roundList.length === 0 || !roundIdFromContract) return;
+
+    const contractRoundNumber = Number(roundIdFromContract);
+    const currentRound = roundList[currentRoundIndex];
+
+    console.log("Current Round:", currentRound);
+    console.log("Last Seen Round:", lastSeenContractRound);
+    console.log("Contract Round Number:", contractRoundNumber);
+    
+    
+
+    if (!currentRound?.underlying_contract_round) return;
+
+    // Check for round transition using contract round numbers
+    if (lastSeenContractRound !== null && contractRoundNumber !== lastSeenContractRound) {
+      // Clear round-specific states
+      setMessages([]);
+      setAiChatMessages([]);
+      
+      // Find and set index for new round
+      const newRoundIndex = roundList.findIndex(
+        round => round.underlying_contract_round === contractRoundNumber
+      );
+      if (newRoundIndex !== -1) {
+        setCurrentRoundIndex(newRoundIndex);
+      }
+
+      setLastSeenContractRound(contractRoundNumber);
+
+      toast({
+        title: "New Round Started",
+        description: `Round ${contractRoundNumber} has begun!`,
+        duration: 5000,
+      });
+    } else if (lastSeenContractRound === null) {
+      setLastSeenContractRound(contractRoundNumber);
+    }
+  }, [roundIdFromContract, roundList, lastSeenContractRound, toast]);
 
   useEffect(() => {
     if (timeLeft !== null) {
@@ -738,10 +874,11 @@ export default function RoomDetailPage() {
             />
             {/* Agent Chat: shows only agent messages */}
             <div className="flex-1 bg-card rounded-lg overflow-hidden w-full">
-              <AgentChat
+            <AgentChat
                 className="h-full min-w-full bg-[#202123] p-3"
                 showHeader={false}
                 messages={[...(roundAgentMessages || []), ...aiChatMessages]}
+                roomId={roomId}
                 loading={isLoadingRoundAgentMessages}
                 roundId={currentRoundId}
               />
@@ -751,7 +888,9 @@ export default function RoomDetailPage() {
           <div className="w-[35%] flex flex-col gap-6">
             <RoundDetailsAndNavigation
               roomData={roomData}
-              roundList={roundList}
+              roundList={roundList.filter((round): round is { id: number; created_at: string; underlying_contract_round: number } => 
+                round.underlying_contract_round !== null
+              )} // Filter out rounds with null contract round for type error
               currentRoundIndex={currentRoundIndex}
               timeLeft={timeLeft?.toLocaleString() || "00:00"} // <-- Formatted string (e.g., "04:32")
               isLoadingRoom={isLoadingRoom}
