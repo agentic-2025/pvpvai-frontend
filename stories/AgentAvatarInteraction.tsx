@@ -7,6 +7,7 @@ import { useState } from "react";
 import { AgentAvatar } from "./AgentAvatar";
 import { BuyHoldPlaceBetDialog } from "./BuyHoldPlaceBetDialog";
 import { PvpActionDialog } from "./PVPActionDialog";
+import { PvpStatusEffects } from "./PvpStatusEffects"; // ADDED: Import new component
 
 interface AgentAvatarInteractionProps {
   name: string;
@@ -17,6 +18,12 @@ interface AgentAvatarInteractionProps {
   agentAddress: string;
   roomData: Tables<"rooms">;
   isRoundOpen: boolean; // ADDED: New prop for round state
+  pvpStatuses: {
+    verb: string;
+    instigator: string;
+    endTime: number;
+    parameters: string;
+  }[]; // ADDED: statuses from contract
 }
 
 const betTypeMap = {
@@ -34,6 +41,7 @@ export function AgentAvatarInteraction({
   agentAddress,
   roomData,
   isRoundOpen, // ADDED: Destructure new prop
+  pvpStatuses, // ADDED
 }: AgentAvatarInteractionProps) {
   const [selectedBetType, setSelectedBetType] = useState<
     "buy" | "hold" | "sell" | null
@@ -53,6 +61,8 @@ export function AgentAvatarInteraction({
             !isRoundOpen ? "opacity-50" : "" // ADDED: Visual feedback for disabled state
           )}
         />
+        {/* ADDED: Show PVP badges next to the avatar */}
+        <PvpStatusEffects statuses={pvpStatuses} />
         {/* MODIFIED: Conditionally render controls based on round state */}
         {isRoundOpen && (
           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
