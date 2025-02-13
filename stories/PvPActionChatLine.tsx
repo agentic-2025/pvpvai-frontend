@@ -3,7 +3,7 @@ import type { z } from "zod";
 import type { pvpActionEnactedAiChatOutputSchema } from "../lib/backend.types";
 import type { Tables } from "../lib/database.types";
 import { PvpActions } from "../lib/pvp.types";
-import { useAgentQuery } from "../lib/queries/agentQueries";
+import { useAgentByWalletAddressQuery } from "../lib/queries/agentQueries";
 import { AgentBadge } from "./AgentBadge";
 import { AgentChatLine } from "./AgentChatLine";
 import { PlayerAddressChip } from "./PlayerAddressChip";
@@ -78,15 +78,15 @@ const AgentBadgeWrapper: FC<{ agent: Tables<"agents"> }> = ({ agent }) => (
 
 type PvPActionChatLineProps = {
   message: z.infer<typeof pvpActionEnactedAiChatOutputSchema>;
+  roomId: number;
 };
 
-const ActionMessage: FC<PvPActionChatLineProps> = ({ message }) => {
+const ActionMessage: FC<PvPActionChatLineProps> = ({ roomId, message }) => {
   const { content } = message;
   const { action, instigatorAddress } = content;
   const targetId = action.parameters.target;
 
-  const { data: targetAgent } = useAgentQuery(targetId);
-
+  const { data: targetAgent } = useAgentByWalletAddressQuery(roomId, targetId);
   if (!targetAgent) return null;
 
   const actionColor = actionColors[action.actionType];
@@ -188,17 +188,21 @@ const ActionMessage: FC<PvPActionChatLineProps> = ({ message }) => {
   );
 };
 
-export const PvPActionChatLine: FC<PvPActionChatLineProps> = ({ message }) => {
+export const PvPActionChatLine: FC<PvPActionChatLineProps> = ({
+  message,
+  roomId,
+}) => {
   const { content } = message;
   const { action } = content;
 
   return (
     <AgentChatLine
+      roomId={roomId}
       agentId={0}
       agentName="PvP"
       agentImageUrl={PvPActionIcon.src}
       agentBorderColor="#EEEEEE"
-      message={<ActionMessage message={message} />}
+      message={<ActionMessage message={message} roomId={roomId} />}
       backgroundIcon={actionToIcon[action.actionType]}
     />
   );

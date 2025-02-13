@@ -742,6 +742,7 @@ export default function RoomDetailPage() {
                 className="h-full min-w-full bg-[#202123] p-3"
                 showHeader={false}
                 messages={[...(roundAgentMessages || []), ...aiChatMessages]}
+                roomId={roomId}
                 loading={isLoadingRoundAgentMessages}
                 roundId={currentRoundId}
               />

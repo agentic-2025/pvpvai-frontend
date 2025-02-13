@@ -64,6 +64,12 @@ export const isSupportedInAiChat = (messageType: WsMessageTypes) => {
   );
 };
 
+export const authenticatedMessageSchema = z.object({
+  messageType: z.string(), // We'll override this with literals in extending schemas
+  signature: z.string(),
+  sender: z.string(),
+});
+
 /*
   SUBSCRIBE ROOM MESSAGES SCHEMA:
   Sent by:
@@ -396,22 +402,19 @@ export type PvpAllAllowedParametersType =
 export type PvpAllPvpActionsType = z.infer<typeof pvpActionSchema>;
 
 // Update the pvpActionEnactedAiChatOutputSchema
-export const pvpActionEnactedAiChatOutputSchema = z.object({
+export const pvpActionEnactedAiChatOutputSchema = authenticatedMessageSchema.extend({
   messageType: z.literal(WsMessageTypes.PVP_ACTION_ENACTED),
-  signature: z.string(),
-  sender: z.string(),
   content: z.object({
     timestamp: z.number(),
+    effectEndTime: z.number(),
     roomId: z.number(),
     roundId: z.number(),
-    instigator: z.number(),
     instigatorAddress: z.string(),
-    txHash: z.string(),
+    txHash: z.string().optional(),
     fee: z.number().optional(),
     action: pvpActionSchema,
   }),
 });
-
 // Response to every POST request to /messages
 export const messagesRestResponseSchema = z.object({
   message: z.string().optional(),

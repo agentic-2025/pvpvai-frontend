@@ -25,6 +25,7 @@ interface AgentChatProps {
   className?: string;
   loading?: boolean;
   roundId?: number;
+  roomId: number;
 }
 
 export function AgentChat({
@@ -33,6 +34,7 @@ export function AgentChat({
   className,
   loading = false,
   roundId,
+  roomId,
 }: AgentChatProps) {
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
 
@@ -131,6 +133,7 @@ export function AgentChat({
                     return (
                       <PvPActionChatLine
                         key={index}
+                        roomId={roomId}
                         message={pvpActionEnactedMessage}
                       />
                     );

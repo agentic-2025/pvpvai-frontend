@@ -7,7 +7,7 @@ const supabase = createClientComponentClient<Database>();
 /**
  * Hook to fetch a single agent by ID
  */
-export function useAgentQuery(agentId: number | string) {
+export function useAgentQuery(agentId: number) {
   return useQuery({
     queryKey: ["agent", agentId],
     queryFn: () => fetchAgent(agentId),
@@ -15,17 +15,18 @@ export function useAgentQuery(agentId: number | string) {
   });
 }
 
-async function fetchAgent(agentId: number | string) {
+export function useAgentByWalletAddressQuery(roomId: number, walletAddress: string) {
+  return useQuery({
+    queryKey: ["agent", roomId, walletAddress],
+    queryFn: () => fetchAgentByWalletAddress(roomId, walletAddress),
+    enabled: !!roomId && !!walletAddress,
+  });
+}
+
+async function fetchAgent(agentId: number) {
   let query = supabase.from("agents").select("*");
 
-  if (typeof agentId === "number") {
-    query = query.eq("id", agentId);
-  } else {
-    // If it's a string, check both wallet addresses
-    query = query.or(
-      `eth_wallet_address.eq.${agentId},sol_wallet_address.eq.${agentId}`
-    );
-  }
+  query = query.eq("id", agentId);
 
   const { data, error } = await query.single();
 
@@ -35,6 +36,28 @@ async function fetchAgent(agentId: number | string) {
   }
 
   return data;
+}
+
+async function fetchAgentByWalletAddress(roomId: number, walletAddress: string) {
+  console.log("Fetching agent by wallet address:", walletAddress, "for room", roomId);
+
+  const { data, error } = await supabase
+    .from("room_agents")
+    .select("*, agents(*)")
+    .eq("wallet_address", walletAddress)
+    .eq("room_id", roomId);
+
+  if (error) {
+    console.error("Error fetching agent:", error);
+    throw error;
+  }
+
+  if (!data) {
+    console.error("No agent found by wallet address:", walletAddress);
+    return null;
+  }
+
+  return data[0].agents;
 }
 
 /**
