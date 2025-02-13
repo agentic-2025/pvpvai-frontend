@@ -1,8 +1,9 @@
 "use client";
 
 import Loader from "@/components/loader";
-import supabase from "@/lib/config";
+import AnimatedBackground from "@/components/ui/animated-tabs";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -10,14 +11,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import AnimatedBackground from "@/components/ui/animated-tabs";
-import { useAccount } from "wagmi";
-import { Card } from "@/components/ui/card";
+import supabase from "@/lib/config";
+import type { Tables } from "@/lib/database.types";
+import { CreateRoomModal } from "@/stories/CreateRoomModal";
+import { RoomTableRow } from "@/stories/RoomTableRow";
 import { animated, useTransition } from "@react-spring/web";
 import { FC, useEffect, useState } from "react";
-import type { Tables } from "@/lib/database.types";
-import { RoomTableRow } from "@/stories/RoomTableRow";
-import { CreateRoomModal } from "@/stories/CreateRoomModal";
+import { useAccount } from "wagmi";
 
 /** Types */
 export type Agent = Tables<"agents">;
@@ -93,6 +93,7 @@ const RoomsPage: FC = () => {
             image_url,
             color,
             chain_id,
+            room_config,
             rounds(
               id,
               created_at,

@@ -34,7 +34,7 @@ import { useEffect, useState } from "react";
 import useWebSocket from "react-use-websocket";
 import { getAddress, PublicClient } from "viem";
 import { readContract } from "viem/actions";
-import { usePublicClient } from "wagmi";
+import { useAccount, usePublicClient } from "wagmi";
 import { z } from "zod";
 
 // --- Query Hooks ---
@@ -438,7 +438,7 @@ export default function RoomDetailPage() {
   const roomId = parseInt(params.id);
   const currentUserId = 1; // TODO: Do not hardcode me
   const publicClient = usePublicClient();
-
+  const { address: walletAddress } = useAccount();
   // Timer states
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [formattedTime, setFormattedTime] = useState<string>("--:--:--");
@@ -772,7 +772,7 @@ export default function RoomDetailPage() {
                   if (readyState === WebSocket.OPEN) {
                     const messagePayload = {
                       messageType: WsMessageTypes.PUBLIC_CHAT,
-                      sender: currentUserId.toString(),
+                      sender: walletAddress,
                       signature: "signature",
                       content: {
                         text: message,
