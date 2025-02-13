@@ -68,6 +68,25 @@ const useRoundsByRoom = (roomId: number) => {
   });
 };
 
+const calculateCurrentRoundAndCountdown = (
+  createdAt: string,
+  roundDuration: number
+) => {
+  const createdAtTimestamp = Math.floor(new Date(createdAt).getTime() / 1000);
+  const currentTimestamp = Math.floor(Date.now() / 1000);
+  const elapsedTime = currentTimestamp - createdAtTimestamp;
+
+  // If the room hasn't started yet, return round 0 and the time until start
+  if (elapsedTime < 0) {
+    return { currentRound: 0, timeLeft: -elapsedTime };
+  }
+
+  const currentRound = Math.floor(elapsedTime / roundDuration) + 1;
+  const timeLeft = roundDuration - (elapsedTime % roundDuration);
+
+  return { currentRound, timeLeft };
+};
+
 type RoundAgentLookup = {
   [agentId: number]: {
     roundAgentData: Tables<"round_agents">;
@@ -712,6 +731,39 @@ export default function RoomDetailPage() {
     }
   }, [timeLeft]);
 
+  useEffect(() => {
+    if (!roomData || !roomData.room_config || !roundList.length) return;
+
+    // Use the earliest (first) round's created_at as the baseline.
+    const baselineRoundCreatedAt = roundList[roundList.length - 1]?.created_at;
+    const roundDuration = roomData.room_config.round_duration;
+    if (!baselineRoundCreatedAt) return;
+
+    const updateTimer = () => {
+      const { timeLeft } = calculateCurrentRoundAndCountdown(
+        baselineRoundCreatedAt,
+        roundDuration
+      );
+      setTimeLeft(timeLeft);
+    };
+
+    // Update the timer every second based solely on recalculation.
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+
+    return () => clearInterval(interval);
+  }, [roomData, roundList]);
+
+  useEffect(() => {
+    if (timeLeft !== null) {
+      setFormattedTime(
+        timeLeft > 0
+          ? new Date(timeLeft * 1000).toISOString().substr(14, 5)
+          : "00:00"
+      );
+    }
+  }, [timeLeft]);
+
   if (isLoadingRoom)
     return (
       <div className="flex items-center justify-center h-screen">
@@ -754,7 +806,7 @@ export default function RoomDetailPage() {
               roomData={roomData}
               roundList={roundList}
               currentRoundIndex={currentRoundIndex}
-              timeLeft={timeLeft?.toLocaleString() || "00:00"} // <-- Formatted string (e.g., "04:32")
+              timeLeft={formattedTime} // <-- Formatted string (e.g., "04:32")
               isLoadingRoom={isLoadingRoom}
               isLoadingRounds={isLoadingRounds}
               setCurrentRoundIndex={setCurrentRoundIndex}
