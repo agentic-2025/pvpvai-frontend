@@ -476,21 +476,25 @@ export default function RoomDetailPage() {
 
   // Query hooks
   const { data: roomData, isLoading: isLoadingRoom } = useRoomDetails(roomId);
-  const { data: roundList = [], isLoading: isLoadingRounds } =
+  const { data: roundList = [], isLoading: isLoadingRounds, refetch: refetchRounds } =
     useRoundsByRoom(roomId);
 
   const currentRoundId = roundList[currentRoundIndex]?.id;
+  console.log("currentRoundId", currentRoundId);
 
   const { data: roundAgentMessages, isLoading: isLoadingRoundAgentMessages } =
     useRoundAgentMessages(currentRoundId);
   const {
     data: roundPublicChatMessages,
     isLoading: isLoadingPublicChatMessages,
+    refetch: refetchRoundPublicChatMessages,
   } = useRoundUserMessages(currentRoundId);
   const { data: roundAgents, isLoading: isLoadingAgents } =
     useRoundAgents(currentRoundId);
   // const { data: gameMaster, isLoading: isLoadingGM } =
   //   useRoundGameMaster(currentRoundId);
+
+  // const queryClient = useQueryClient();
 
   // --- WebSocket Logic ---
   const socketUrl = `${process.env.NEXT_PUBLIC_BACKEND_WS_URL}`;
@@ -763,6 +767,32 @@ export default function RoomDetailPage() {
       );
     }
   }, [timeLeft]);
+
+  const handleRoundInserts = (payload: any) => {
+    if (payload.new.room_id !== roomId) {
+      return;
+    }
+
+    console.log("new rounds inserted refetching round", payload.new.id);
+
+    refetchRounds();
+    setAiChatMessages([]);
+    setMessages([]);
+    setCurrentRoundIndex(0);
+  };
+
+  useEffect(() => {
+    const listener = supabase
+      .channel('rounds')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rounds' }, payload =>
+        handleRoundInserts(payload)
+      )
+      .subscribe();
+
+    return () => {
+      listener.unsubscribe();
+    };
+  }, [roomId]);
 
   if (isLoadingRoom)
     return (
