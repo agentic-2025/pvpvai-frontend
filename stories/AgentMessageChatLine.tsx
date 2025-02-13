@@ -1,9 +1,15 @@
 "use client";
 
-import { agentMessageAiChatOutputSchema } from "@/lib/backend.types";
+import {
+  agentMessageAiChatOutputSchema,
+  poisonStatusSchema,
+} from "@/lib/backend.types";
+import { Tables } from "@/lib/database.types";
+import { PvpActions } from "@/lib/pvp.types";
 import { useAgentsByIdsQuery } from "@/lib/queries/agentQueries";
 import { z } from "zod";
 import { AgentChatLine } from "./AgentChatLine";
+import { actionColors } from "./PvPActionChatLine";
 
 type AgentMessageProps = {
   message: z.infer<typeof agentMessageAiChatOutputSchema>;
@@ -30,6 +36,144 @@ const emptyMessageFallback = (agentName: string): React.ReactNode => {
   );
 };
 
+//
+const RenderMessageWithPvp = (
+  message: z.infer<typeof agentMessageAiChatOutputSchema>,
+  senderAgent: Tables<"agents">,
+  agents: Tables<"agents">[]
+) => {
+  const originalText = message.content.originalMessage.content.text;
+
+  // Check if sender is silenced first (no post PvP messages)
+  if (Object.keys(message.content.postPvpMessages).length === 0) {
+    return (
+      <div className="flex gap-x-2">
+        <span className="line-through">{originalText}</span>
+        <span className="text-muted-foreground italic">(SILENCED)</span>
+      </div>
+    );
+  }
+
+  // Group agents by their status effects
+  const statusEffects = {
+    deafened: [] as string[],
+    poisoned: [] as { agentName: string; original: string; heard: string }[],
+  };
+
+  // Process sender's poison effect first
+  const senderPoisoned = message.content.pvpStatusEffects[
+    senderAgent.id.toString()
+  ]?.find((effect) => effect.verb === "poison");
+
+  let displayText = message.content.originalMessage.content.text;
+
+  // Handle sender's poison effect
+  if (senderPoisoned) {
+    const params = poisonStatusSchema.shape.parameters.safeParse(
+      senderPoisoned.parameters
+    );
+    if (params.success) {
+      const textToCheck = params.data.case_sensitive
+        ? displayText
+        : displayText.toLowerCase();
+      const findText = params.data.case_sensitive
+        ? params.data.find
+        : params.data.find.toLowerCase();
+
+      if (textToCheck.includes(findText)) {
+        if (params.data.case_sensitive) {
+          displayText = displayText.replace(
+            params.data.find,
+            params.data.replace
+          );
+        } else {
+          const regex = new RegExp(params.data.find, "i");
+          displayText = displayText.replace(regex, params.data.replace);
+        }
+        statusEffects.poisoned.push({
+          agentName: senderAgent.display_name,
+          original: params.data.find,
+          heard: params.data.replace,
+        });
+      }
+    }
+  }
+
+  // Process target agents' status effects
+  message.content.originalTargets.forEach((targetId) => {
+    const targetAgent = agents?.find((a) => a.id === targetId);
+    if (!targetAgent) return;
+
+    // Check if target is deafened
+    if (
+      !Object.keys(message.content.postPvpMessages).includes(
+        targetId.toString()
+      )
+    ) {
+      statusEffects.deafened.push(targetAgent.display_name);
+      return;
+    }
+
+    // Check if target is poisoned
+    const poisonEffect = message.content.pvpStatusEffects[
+      targetId.toString()
+    ]?.find((effect) => effect.verb === "poison");
+
+    if (poisonEffect) {
+      const params = poisonStatusSchema.shape.parameters.safeParse(
+        poisonEffect.parameters
+      );
+      if (params.success) {
+        const textToCheck = params.data.case_sensitive
+          ? displayText
+          : displayText.toLowerCase();
+        const findText = params.data.case_sensitive
+          ? params.data.find
+          : params.data.find.toLowerCase();
+
+        if (textToCheck.includes(findText)) {
+          statusEffects.poisoned.push({
+            agentName: targetAgent.display_name,
+            original: params.data.find,
+            heard: params.data.replace,
+          });
+        }
+      }
+    }
+  });
+
+  return (
+    <div className="flex flex-col gap-2">
+      {/* Main message */}
+      <div>{displayText}</div>
+
+      {/* Status effects */}
+      <div className="flex flex-col gap-1">
+        {/* Deafened agents */}
+        {statusEffects.deafened.map((agentName, index) => (
+          <div key={`deaf-${index}`} className="text-muted-foreground italic">
+            {agentName} is deafened and didn&apos;t hear this message
+          </div>
+        ))}
+
+        {/* Poisoned agents */}
+        {statusEffects.poisoned.map(({ agentName, original, heard }, index) => (
+          <div
+            key={`poison-${index}`}
+            className="text-muted-foreground italic"
+            style={{ color: actionColors[PvpActions.POISON].text }}
+          >
+            {agentName}{" "}
+            {agentName === senderAgent.display_name
+              ? `is poisoned, wanted to say "${original}" but instead said "${heard}"`
+              : `is poisoned, didn't hear "${original}" but instead heard "${heard}"`}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export function AgentMessageChatLine({
   message,
   showSentiment = true,
@@ -51,11 +195,13 @@ export function AgentMessageChatLine({
     console.log("Couldn't find sender agent", message.content.senderId);
     return null;
   }
-  // We could even memoize messageContent if needed
-  const messageContent = message.content.originalMessage
-    ? message.content.originalMessage.content.text
-    : emptyMessageFallback(senderAgent.display_name);
 
+  const messageContent = RenderMessageWithPvp(
+    message,
+    senderAgent,
+    agents || []
+  );
+  // We could even memoize messageContent if needed
   return (
     <>
       {/* TODO: Render PvP status effects from message.content.pvpStatusEffects */}

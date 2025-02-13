@@ -371,7 +371,7 @@ function AgentsDisplay({
   }, [roundAgents, roundIdFromContract, roomData]);
 
   return (
-    <div className="w-full h-[60%] bg-card rounded-lg p-3">
+    <div className="w-full h-[40%] bg-card rounded-lg p-3">
       <div className="bg-[#202123] flex flex-col items-center justify-center w-full h-full rounded-md">
         {isLoadingAgents ? (
           <AgentsSkeleton />
@@ -402,7 +402,7 @@ function AgentsDisplay({
               })()}
             </div>
 
-            <div className="flex flex-wrap justify-center items-center gap-24 overflow-y-auto scroll-thin w-full max-h-[80%] p-4">
+            <div className="flex flex-wrap justify-center items-center gap-8 overflow-y-auto scroll-thin w-full max-h-[80%] p-4">
               {roundAgents && Object.values(roundAgents).length > 0 ? (
                 Object.values(roundAgents).map((agent) => (
                   <BuySellGameAvatarInteraction
@@ -800,6 +800,10 @@ export default function RoomDetailPage() {
               />
             </div>
           </div>
+        </div>
+        <div className="text-sm text-gray-400 text-center">
+          Internal round id: {currentRoundId}, contract round id:{" "}
+          {roundIdFromContract}
         </div>
       </div>
     </div>

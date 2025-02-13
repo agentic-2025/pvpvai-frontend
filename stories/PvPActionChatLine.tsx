@@ -28,11 +28,12 @@ const actionToIcon: Record<PvpActions, string> = {
   [PvpActions.MIND_CONTROL]: Poison.src,
   [PvpActions.FRENZY]: Knife.src,
   [PvpActions.OVERLOAD]: Deafen.src,
-  [PvpActions.HACK]: Poison.src,
-  [PvpActions.CORRUPT]: Silence.src,
+  [PvpActions.CHARM]: Poison.src,
+  [PvpActions.INVISIBLE]: Deafen.src,
+  [PvpActions.CLAIRVOYANCE]: Poison.src,
 };
 
-const actionColors = {
+export const actionColors = {
   [PvpActions.POISON]: {
     text: "#A020F0", // Bright purple
     darkText: "#6B21A8", // Dark purple
@@ -42,7 +43,7 @@ const actionColors = {
     darkText: "#991B1B", // Dark red
   },
   [PvpActions.SILENCE]: {
-    text: "#6B7280", // Grey
+    text: "#BFC7D4", // Grey
     darkText: "#4B5563", // Dark grey
   },
   [PvpActions.DEAFEN]: {
@@ -99,7 +100,7 @@ const ActionMessage: FC<PvPActionChatLineProps> = ({ roomId, message }) => {
             <div className="flex items-center gap-2">
               <PlayerAddressChip address={instigatorAddress} variant="small" />
               <span
-                className="font-bold italic"
+                className="font-bold italic  text-foreground"
                 style={{ color: actionColor.text }}
               >
                 silenced
@@ -119,10 +120,10 @@ const ActionMessage: FC<PvPActionChatLineProps> = ({ roomId, message }) => {
             <div className="flex items-center gap-2">
               <PlayerAddressChip address={instigatorAddress} variant="small" />
               <span
-                className="font-bold italic"
+                className="font-bold italic text-foreground"
                 style={{ color: actionColor.text }}
               >
-                muted
+                deafened
               </span>
               <AgentBadgeWrapper agent={targetAgent} />
             </div>
@@ -197,7 +198,6 @@ export const PvPActionChatLine: FC<PvPActionChatLineProps> = ({
 
   return (
     <AgentChatLine
-      roomId={roomId}
       agentId={0}
       agentName="PvP"
       agentImageUrl={PvPActionIcon.src}
