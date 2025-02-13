@@ -147,6 +147,7 @@ export function CreateRoomModal({
     supabase
       .from("agents")
       .select("*")
+      .eq("status", "Up")
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
         if (!error) {
@@ -476,7 +477,7 @@ export function CreateRoomModal({
           onChange={(e) => setSearchAgentQuery(e.target.value)}
           className="bg-muted border-border"
         />
-        <ScrollArea className="h-[400px] rounded-md border border-border">
+        <ScrollArea className="h-[300px] rounded-md border border-border">
           <div className="p-4">
             {loadingAgents ? (
               <div className="text-center text-gray-400">Loading agents...</div>
