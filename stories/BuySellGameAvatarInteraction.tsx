@@ -1,9 +1,10 @@
-
 import Link from "next/link";
 import { FC } from "react";
 import { AgentAvatarInteraction } from "./AgentAvatarInteraction";
 import { BullBearHoldRatioBar } from "./BullBearHoldRatioBar";
 import { Tables } from "@/lib/database.types";
+import { cn } from "@/lib/utils";
+// import { RoundState } from '@/hooks/useRoundTransitions';
 
 interface BuySellGameAvatarInteractionProps {
   id: number;
@@ -19,6 +20,16 @@ interface BuySellGameAvatarInteractionProps {
   showName?: boolean;
   address: string;
   roomData: Tables<"rooms">;
+  isRoundOpen: boolean; // ADDED: New prop for round state
+  // ADDED: PVP statuses from contract
+  pvpStatuses: {
+    verb: string;
+    instigator: string;
+    endTime: number;
+    parameters: string;
+  }[];
+  isRoundActive: boolean;
+  // roundState: RoundState;
 }
 
 export const BuySellGameAvatarInteraction: FC<
@@ -35,12 +46,34 @@ export const BuySellGameAvatarInteraction: FC<
   hold,
   showName = true,
   address,
-  roomData
+  roomData,
+  isRoundOpen, // ADDED: Destructure new prop
+  pvpStatuses, // from contract
+  isRoundActive,
+  // roundState,
 }) => {
+  // Debug render state
+  console.log('[Avatar Interaction]', {
+    name,
+    isRoundActive,
+    // roundState,
+    timestamp: new Date().toISOString()
+  });
 
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex flex-col items-center gap-2">
+    <div className={cn(
+      "flex flex-col gap-1 relative",
+      // Visual feedback for inactive rounds
+      !isRoundActive && "opacity-50 cursor-not-allowed" 
+    )}>
+
+
+      <div
+        className={cn(
+          "flex flex-col items-center gap-2",
+          !isRoundOpen && "opacity-50" // ADDED: Visual feedback for inactive rounds
+        )}
+      >
         <AgentAvatarInteraction
           roomData={roomData}
           name={name}
@@ -49,6 +82,8 @@ export const BuySellGameAvatarInteraction: FC<
           betAmount={betAmount}
           betType={betType as "buy" | "hold" | "sell" | null}
           agentAddress={address}
+          isRoundOpen={isRoundOpen} // ADDED: Pass round state to child component
+          pvpStatuses={pvpStatuses} // ADDED: pass statuses down
         />
         {showName && (
           <Link

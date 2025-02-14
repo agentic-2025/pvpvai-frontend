@@ -345,6 +345,34 @@ function AgentsDisplay({
   const [agentPositions, setAgentPositions] = useState<{ [key: number]: any }>(
     {}
   );
+  const [agentPvpStatuses, setAgentPvpStatuses] = useState<{ [key: number]: any }>({});
+
+
+  useEffect(() => {
+    const fetchPvpStatuses = async () => {
+      if (!roundAgents || !roomData || !roundIdFromContract) return;
+      const statuses: { [key: number]: any } = {};
+      for (const agent of Object.values(roundAgents)) {
+        try {
+          const pvpStatus = await readContract(wagmiConfig, {
+            abi: roomAbi,
+            address: getAddress(roomData.contract_address || ""),
+            functionName: "getPvpStatuses",
+            args: [agent.walletAddress as `0x${string}`],
+          });
+          statuses[agent.agentData.id] = pvpStatus;
+        } catch (error) {
+          console.error(`Error fetching PVP status for agent ${agent.agentData.id}:`, error);
+        }
+      }
+      setAgentPvpStatuses(statuses);
+    };
+  fetchPvpStatuses();
+    const interval = setInterval(fetchPvpStatuses, 4000);
+    return () => clearInterval(interval);
+  }, [roundAgents, roundIdFromContract, roomData])
+
+
 
   useEffect(() => {
     const fetchAgentPositions = async () => {
@@ -377,6 +405,10 @@ function AgentsDisplay({
 
     return () => clearInterval(interval);
   }, [roundAgents, roundIdFromContract, roomData, publicClient]);
+
+  // useeffect for isroundopen and isroundactive (active = current round viewed)
+
+  // useEffect(() => {
 
   return (
     <div className="w-full h-[40%] bg-card rounded-lg p-3">
@@ -420,12 +452,16 @@ function AgentsDisplay({
                     name={agent.agentData.display_name}
                     imageUrl={agent.agentData.image_url || ""}
                     borderColor={agent.agentData.color}
+              
                     sell={agentPositions[agent.agentData.id]?.sell || 0}
                     buy={agentPositions[agent.agentData.id]?.buyPool || 0}
                     hold={agentPositions[agent.agentData.id]?.hold || 0}
                     variant="full"
                     betAmount={agentPositions[agent.agentData.id]?.hold || 0}
                     address={agent.walletAddress}
+                    pvpStatuses={agentPvpStatuses[agent.agentData.id] || []}
+                    isRoundActive={true}
+                    isRoundOpen={true}
                   />
                 ))
               ) : (
@@ -459,6 +495,7 @@ export default function RoomDetailPage() {
     AllAiChatMessageSchemaTypes[]
   >([]);
   const [currentRoundIndex, setCurrentRoundIndex] = useState<number>(0);
+
 
   const { toast } = useToast();
   const maxRetries = 5;
@@ -672,6 +709,8 @@ export default function RoomDetailPage() {
     };
     fetchRoundIdFromContract();
   }, [currentRoundId, roomData, publicClient]);
+
+
 
 
   useEffect(() => {
