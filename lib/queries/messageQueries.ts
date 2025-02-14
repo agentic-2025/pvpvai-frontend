@@ -94,7 +94,7 @@ export const useRoundAgentMessages = (
           WsMessageTypes.PVP_STATUS_REMOVED,
           WsMessageTypes.AGENT_DECISION,
         ])
-        .order("created_at", { ascending: false })
+        .order("created_at", { ascending: true })
         .limit(100); //TODO, implement infinite scroll or pagination later
       if (error) {
         console.error("Error fetching round agent messages", error);

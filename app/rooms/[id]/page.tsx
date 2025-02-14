@@ -19,7 +19,7 @@ import {
 } from "@/lib/backend.types";
 import supabase from "@/lib/config";
 import { roomAbi } from "@/lib/contract.types";
-import { Tables } from "@/lib/database.types";
+import { Database, Tables } from "@/lib/database.types";
 import {
   useRoundAgentMessages,
   useRoundUserMessages,
@@ -58,7 +58,7 @@ const useRoundsByRoom = (roomId: number) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rounds")
-        .select("id, created_at")
+        .select("id, status, active, underlying_contract_round, created_at")
         .eq("room_id", roomId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -70,12 +70,10 @@ const useRoundsByRoom = (roomId: number) => {
 const calculateCurrentRoundAndCountdown = (
   createdAt: string,
   roundDuration: number
-) => {
+): { timeLeft: number } => {
   const createdAtTimestamp = Math.floor(new Date(createdAt).getTime() / 1000);
   const currentTimestamp = Math.floor(new Date().getTime() / 1000);
   const endTimestamp = createdAtTimestamp + roundDuration;
-  console.log("currentTimestamp", currentTimestamp);
-  console.log("endTimestamp", endTimestamp);
   if (currentTimestamp > endTimestamp) {
     return { timeLeft: 0 };
   }
@@ -137,23 +135,23 @@ const useRoundAgents = (roundId: number) => {
   });
 };
 
-const fetchCurrentRoundId = async (
-  contractAddress: string,
-  publicClient: PublicClient
-) => {
-  try {
-    console.log("Fetching current contract round ID");
-    const result = await readContract(publicClient, {
-      abi: roomAbi,
-      address: getAddress(contractAddress),
-      functionName: "currentRoundId",
-    });
-    return result;
-  } catch (error) {
-    console.error("Error fetching current round ID:", error);
-    return null;
-  }
-};
+// const fetchCurrentRoundId = async (
+//   contractAddress: string,
+//   publicClient: PublicClient
+// ) => {
+//   try {
+//     console.log("Fetching current contract round ID");
+//     const result = await readContract(publicClient, {
+//       abi: roomAbi,
+//       address: getAddress(contractAddress),
+//       functionName: "currentRoundId",
+//     });
+//     return result;
+//   } catch (error) {
+//     console.error("Error fetching current round ID:", error);
+//     return null;
+//   }
+// };
 
 // const getRoundEndTime = async (contractAddress: string, roundId: bigint, publicClient: PublicClient) => {
 //   try {
@@ -302,21 +300,33 @@ function isValidMessageType(
 // Add this new component above the main component
 function AgentsSkeleton() {
   return (
-    <div className="flex flex-wrap justify-center items-center gap-10">
-      {[1, 2, 3, 4].map((i) => (
-        <div
-          key={i}
-          className="flex flex-col items-center gap-2 w-[200px] h-[250px] bg-card/50 rounded-lg p-4"
-        >
-          <Skeleton className="w-24 h-24 rounded-full" />
-          <Skeleton className="w-3/4 h-6" />
-          <Skeleton className="w-1/2 h-4" />
-          <div className="flex gap-2 mt-2">
-            <Skeleton className="w-20 h-8" />
-            <Skeleton className="w-20 h-8" />
-          </div>
+    <div className="flex flex-col items-center justify-center w-full h-full">
+      {/* Token info skeleton */}
+      <div className="flex flex-col items-center justify-center gap-y-2 w-full pb-4 border-b border-gray-800 mb-4">
+        <Skeleton className="h-6 w-32" /> {/* "Agents are discussing" text */}
+        <div className="flex items-center gap-x-2">
+          <Skeleton className="w-14 h-14 rounded" /> {/* Token image */}
+          <Skeleton className="h-8 w-48" /> {/* Token name and symbol */}
         </div>
-      ))}
+      </div>
+
+      {/* Agents grid skeleton */}
+      <div className="flex flex-wrap justify-center items-center gap-8 overflow-y-auto scroll-thin w-full max-h-[80%] p-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className="flex flex-col items-center gap-2 w-[200px] bg-card/50 rounded-lg p-4"
+          >
+            <Skeleton className="w-24 h-24 rounded-full" /> {/* Agent avatar */}
+            <Skeleton className="w-3/4 h-6" /> {/* Agent name */}
+            <div className="flex gap-2 mt-2">
+              <Skeleton className="w-20 h-8" /> {/* Buy/Sell/Hold stats */}
+              <Skeleton className="w-20 h-8" />
+              <Skeleton className="w-20 h-8" />
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -326,23 +336,28 @@ function AgentsDisplay({
   isLoadingAgents,
   roundIdFromContract,
   roomData,
-  publicClient,
+  isRoundTimerExpired,
 }: {
   roundAgents: RoundAgentLookup | undefined;
   isLoadingAgents: boolean;
-  roundIdFromContract: bigint | null;
+  roundIdFromContract: number | null;
   roomData: Tables<"rooms">;
-  publicClient: PublicClient;
+  // roundStatus: Database["public"]["Enums"]["round_status"];
+  // roundActive: boolean;
+  isRoundTimerExpired: boolean;
 }) {
   const [agentPositions, setAgentPositions] = useState<{ [key: number]: any }>(
     {}
   );
-  const [agentPvpStatuses, setAgentPvpStatuses] = useState<{ [key: number]: any }>({});
+  const [agentPvpStatuses, setAgentPvpStatuses] = useState<{
+    [key: number]: any;
+  }>({});
 
-
+  const publicClient = usePublicClient();
   useEffect(() => {
     const fetchPvpStatuses = async () => {
-      if (!roundAgents || !roomData || !roundIdFromContract) return;
+      if (!roundAgents || !roomData || !roundIdFromContract || !publicClient)
+        return;
       const statuses: { [key: number]: any } = {};
       for (const agent of Object.values(roundAgents)) {
         try {
@@ -355,7 +370,10 @@ function AgentsDisplay({
           });
           statuses[agent.agentData.id] = pvpStatus;
         } catch (error) {
-          console.error(`Error fetching PVP status for agent ${agent.agentData.id}:`, error);
+          console.error(
+            `Error fetching PVP status for agent ${agent.agentData.id}:`,
+            error
+          );
         }
       }
       setAgentPvpStatuses(statuses);
@@ -365,11 +383,10 @@ function AgentsDisplay({
     return () => clearInterval(interval);
   }, [roundAgents, roundIdFromContract, roomData, publicClient]);
 
-
-
   useEffect(() => {
     const fetchAgentPositions = async () => {
-      if (!roundAgents || !roomData || !roundIdFromContract) return;
+      if (!roundAgents || !roomData || !roundIdFromContract || !publicClient)
+        return;
 
       console.log("roundIdFromContract", roundIdFromContract);
       const positions: { [key: number]: any } = {};
@@ -377,7 +394,7 @@ function AgentsDisplay({
         try {
           const position = await getAgentPosition(
             roomData.contract_address || "",
-            roundIdFromContract,
+            BigInt(roundIdFromContract),
             agent.walletAddress as `0x${string}`,
             publicClient
           );
@@ -445,7 +462,6 @@ function AgentsDisplay({
                     name={agent.agentData.display_name}
                     imageUrl={agent.agentData.image_url || ""}
                     borderColor={agent.agentData.color}
-              
                     sell={agentPositions[agent.agentData.id]?.sell || 0}
                     buy={agentPositions[agent.agentData.id]?.buyPool || 0}
                     hold={agentPositions[agent.agentData.id]?.hold || 0}
@@ -453,8 +469,7 @@ function AgentsDisplay({
                     betAmount={agentPositions[agent.agentData.id]?.hold || 0}
                     address={agent.walletAddress}
                     pvpStatuses={agentPvpStatuses[agent.agentData.id] || []}
-                    isRoundActive={true}
-                    isRoundOpen={true}
+                    isRoundTimerExpired={isRoundTimerExpired}
                   />
                 ))
               ) : (
@@ -475,7 +490,6 @@ export default function RoomDetailPage() {
   const roomId = parseInt(params.id);
   const currentUserId = 1; // TODO: Do not hardcode me
   const { address: walletAddress } = useAccount();
-  const publicClient = usePublicClient();
   // Timer states
   const [formattedTime, setFormattedTime] = useState<string>("--:--:--");
   // Separate states for public chat and agent messages
@@ -488,12 +502,15 @@ export default function RoomDetailPage() {
   >([]);
   const [currentRoundIndex, setCurrentRoundIndex] = useState<number>(0);
 
-
   const { toast } = useToast();
   const maxRetries = 5;
 
   // Query hooks
-  const { data: roomData, isLoading: isLoadingRoom } = useRoomDetails(roomId);
+  const { data: roomData, isLoading: isLoadingRoom } = useRoomDetails(
+    roomId /*, {
+    refetchInterval: 3000,
+  }*/
+  );
   const {
     data: roundList = [],
     isLoading: isLoadingRounds,
@@ -501,6 +518,11 @@ export default function RoomDetailPage() {
   } = useRoundsByRoom(roomId);
 
   const currentRoundId = roundList[currentRoundIndex]?.id;
+  const currentRoundContractId =
+    roundList[currentRoundIndex]?.underlying_contract_round;
+  const roundStatus = roundList[currentRoundIndex]?.status;
+  const roundActive = roundList[currentRoundIndex]?.active;
+
 
   const { data: roundAgentMessages, isLoading: isLoadingRoundAgentMessages } =
     useRoundAgentMessages(currentRoundId);
@@ -681,29 +703,20 @@ export default function RoomDetailPage() {
       },
     });
 
-  // --- Timer Logic ---
-  // Instead of refreshing the timer every 5 seconds only,
-  // we use a two‑tier approach:
-  // 1. A 1‑second interval that decrements the local timer.
-  // 2. A 5‑second interval that re‑fetches the round end time from the blockchain.
-  const [roundIdFromContract, setRoundIdFromContract] = useState<bigint | null>(
-    null
-  );
+  // useEffect(() => {
+  //   if (!roomData) return;
 
-  useEffect(() => {
-    if (!roomData) return;
+  //   const fetchRoundIdFromContract = async () => {
+  //     const roundIdFromContract = await fetchCurrentRoundId(
+  //       roomData.contract_address || "",
+  //       publicClient
+  //     );
 
-    const fetchRoundIdFromContract = async () => {
-      const roundIdFromContract = await fetchCurrentRoundId(
-        roomData.contract_address || "",
-        publicClient
-      );
-
-      console.log("roundIdFromContract", roundIdFromContract);
-      setRoundIdFromContract(roundIdFromContract);
-    };
-    fetchRoundIdFromContract();
-  }, [currentRoundId, roomData, publicClient]);
+  //     console.log("roundIdFromContract", roundIdFromContract);
+  //     setRoundIdFromContract(roundIdFromContract);
+  //   };
+  //   fetchRoundIdFromContract();
+  // }, [currentRoundId, roomData, publicClient]);
 
   useEffect(() => {
     if (!roomData || !roomData.room_config || !roundList.length) return;
@@ -719,13 +732,11 @@ export default function RoomDetailPage() {
         roundDuration
       );
 
-      if (timeLeft !== null) {
-        setFormattedTime(
-          timeLeft > 0
-            ? new Date(timeLeft * 1000).toISOString().substr(14, 5)
-            : "00:00"
-        );
-      }
+      setFormattedTime(
+        timeLeft > 0
+          ? new Date(timeLeft * 1000).toISOString().substr(14, 5)
+          : "00:00"
+      );
     };
 
     // Update the timer every second based solely on recalculation.
@@ -775,6 +786,18 @@ export default function RoomDetailPage() {
         <span>Room not found</span>
       </div>
     );
+
+
+  const isRoundTimerExpired = (() => {
+    const currentRoundCreatedAt = roundList[0]?.created_at;
+    const roundDuration = roomData.room_config?.round_duration;
+    const timeLeft = calculateCurrentRoundAndCountdown(
+      currentRoundCreatedAt,
+      roundDuration
+    );
+    return timeLeft.timeLeft <= 0;
+  })();
+
   return (
     <div className="flex items-center justify-center w-full">
       <div className="max-w-screen-2xl w-full mx-auto p-4 bg-secondary/50 rounded-xl">
@@ -784,9 +807,11 @@ export default function RoomDetailPage() {
             <AgentsDisplay
               roundAgents={roundAgents}
               isLoadingAgents={isLoadingAgents}
-              roundIdFromContract={roundIdFromContract}
+              roundIdFromContract={currentRoundContractId}
               roomData={roomData}
-              publicClient={publicClient}
+              roundStatus={roundStatus}
+              roundActive={roundActive}
+              isRoundTimerExpired={isRoundTimerExpired}
             />
             {/* Agent Chat: shows only agent messages */}
             <div className="flex-1 bg-card rounded-lg overflow-hidden w-full">
@@ -854,7 +879,7 @@ export default function RoomDetailPage() {
         </div>
         <div className="text-sm text-gray-400 text-center">
           Internal round id: {currentRoundId}, contract round id:{" "}
-          {roundIdFromContract}
+          {currentRoundContractId}
         </div>
       </div>
     </div>

@@ -1,9 +1,9 @@
+import { Tables } from "@/lib/database.types";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { FC } from "react";
 import { AgentAvatarInteraction } from "./AgentAvatarInteraction";
 import { BullBearHoldRatioBar } from "./BullBearHoldRatioBar";
-import { Tables } from "@/lib/database.types";
-import { cn } from "@/lib/utils";
 // import { RoundState } from '@/hooks/useRoundTransitions';
 
 interface BuySellGameAvatarInteractionProps {
@@ -30,6 +30,7 @@ interface BuySellGameAvatarInteractionProps {
   }[];
   isRoundActive: boolean;
   // roundState: RoundState;
+  isRoundTimerExpired: boolean;
 }
 
 export const BuySellGameAvatarInteraction: FC<
@@ -47,31 +48,21 @@ export const BuySellGameAvatarInteraction: FC<
   showName = true,
   address,
   roomData,
-  isRoundOpen, // ADDED: Destructure new prop
   pvpStatuses, // from contract
-  isRoundActive,
+  isRoundTimerExpired,
   // roundState,
 }) => {
-  // Debug render state
-  console.log('[Avatar Interaction]', {
-    name,
-    isRoundActive,
-    // roundState,
-    timestamp: new Date().toISOString()
-  });
-
   return (
-    <div className={cn(
-      "flex flex-col gap-1 relative",
-      // Visual feedback for inactive rounds
-      !isRoundActive && "opacity-50 cursor-not-allowed" 
-    )}>
-
-
+    <div
+      className={cn(
+        "flex flex-col gap-1 relative",
+        // Visual feedback for inactive rounds
+        isRoundTimerExpired && "opacity-50 cursor-not-allowed"
+      )}
+    >
       <div
         className={cn(
           "flex flex-col items-center gap-2",
-          !isRoundOpen && "opacity-50" // ADDED: Visual feedback for inactive rounds
         )}
       >
         <AgentAvatarInteraction
@@ -82,7 +73,7 @@ export const BuySellGameAvatarInteraction: FC<
           betAmount={betAmount}
           betType={betType as "buy" | "hold" | "sell" | null}
           agentAddress={address}
-          isRoundOpen={isRoundOpen} // ADDED: Pass round state to child component
+          isRoundTimerExpired={isRoundTimerExpired} // ADDED: Pass round state to child component
           pvpStatuses={pvpStatuses} // ADDED: pass statuses down
         />
         {showName && (

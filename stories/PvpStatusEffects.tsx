@@ -30,26 +30,39 @@ export const PvpStatusEffects: FC<{ statuses: Status[] }> = ({ statuses }) => {
   }, [statuses]);
 
   if (!statuses.length) return null;
-  
 
   return (
     <div className="absolute -top-2 -right-2 flex flex-wrap gap-1 justify-end">
-      {statuses.map((status, idx) => (
-        <div
-          key={idx}
-          // Comment: show that we added countdown timer
-          className="text-white text-s px-2 py-0.5 rounded-full font-large flex items-center gap-1"
-          title={`Applied by ${status.instigator}`}
-          style={{color: status.verb.toUpperCase() === "SILENCE" ? "#FFF": "#000", backgroundColor: actionColors[status.verb.toUpperCase() as "POISON" | "SILENCE" | "DEAFEN" | "ATTACK"].darkText}}
-    
-        >
-          {status.verb.toUpperCase()}
-          <span className="text-[0.7rem]">
-            {/* Comment: countdown in seconds */}
-            {timers[idx] > 0 ? `(${timers[idx]}s)` : "(expired)"}
-          </span>
-        </div>
-      ))}
+      {statuses.map((status, idx) => {
+        // Skip rendering if timer has expired
+        if (timers[idx] <= 0) return null;
+
+        const verbUpper = status.verb.toUpperCase();
+
+        const color =
+          verbUpper === "SILENCE" || verbUpper === "POISON" ? "#FFF" : "#000";
+
+        return (
+          <div
+            key={idx}
+            // Comment: show that we added countdown timer
+            className="text-white text-s px-2 py-0.5 rounded-full font-large flex items-center gap-1"
+            title={`Applied by ${status.instigator}`}
+            style={{
+              color,
+              backgroundColor:
+                actionColors[
+                  verbUpper as "POISON" | "SILENCE" | "DEAFEN" | "ATTACK"
+                ].darkText,
+            }}
+          >
+            {verbUpper}
+            <span className="text-[0.7rem]">
+              {/* Comment: countdown in seconds */}({timers[idx]}s)
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 };
