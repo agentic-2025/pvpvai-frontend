@@ -1,9 +1,10 @@
-
+import { Tables } from "@/lib/database.types";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { FC } from "react";
 import { AgentAvatarInteraction } from "./AgentAvatarInteraction";
 import { BullBearHoldRatioBar } from "./BullBearHoldRatioBar";
-import { Tables } from "@/lib/database.types";
+// import { RoundState } from '@/hooks/useRoundTransitions';
 
 interface BuySellGameAvatarInteractionProps {
   id: number;
@@ -19,6 +20,17 @@ interface BuySellGameAvatarInteractionProps {
   showName?: boolean;
   address: string;
   roomData: Tables<"rooms">;
+  isRoundOpen: boolean; // ADDED: New prop for round state
+  // ADDED: PVP statuses from contract
+  pvpStatuses: {
+    verb: string;
+    instigator: string;
+    endTime: number;
+    parameters: string;
+  }[];
+  isRoundActive: boolean;
+  // roundState: RoundState;
+  isRoundTimerExpired: boolean;
 }
 
 export const BuySellGameAvatarInteraction: FC<
@@ -35,12 +47,24 @@ export const BuySellGameAvatarInteraction: FC<
   hold,
   showName = true,
   address,
-  roomData
+  roomData,
+  pvpStatuses, // from contract
+  isRoundTimerExpired,
+  // roundState,
 }) => {
-
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex flex-col items-center gap-2">
+    <div
+      className={cn(
+        "flex flex-col gap-1 relative",
+        // Visual feedback for inactive rounds
+        isRoundTimerExpired && "opacity-50 cursor-not-allowed"
+      )}
+    >
+      <div
+        className={cn(
+          "flex flex-col items-center gap-2",
+        )}
+      >
         <AgentAvatarInteraction
           roomData={roomData}
           name={name}
@@ -49,6 +73,8 @@ export const BuySellGameAvatarInteraction: FC<
           betAmount={betAmount}
           betType={betType as "buy" | "hold" | "sell" | null}
           agentAddress={address}
+          isRoundTimerExpired={isRoundTimerExpired} // ADDED: Pass round state to child component
+          pvpStatuses={pvpStatuses} // ADDED: pass statuses down
         />
         {showName && (
           <Link

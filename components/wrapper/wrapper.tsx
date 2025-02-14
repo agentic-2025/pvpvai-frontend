@@ -6,19 +6,10 @@ import { Navbar } from "@/stories/Navbar";
 import { getDefaultConfig, RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import "@rainbow-me/rainbowkit/styles.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createPublicClient, createWalletClient, custom } from "viem";
 import { arbitrumSepolia, baseSepolia } from "viem/chains";
-import { http, WagmiProvider } from "wagmi";
+import { WagmiProvider } from "wagmi";
 
-export const wagmiConfig = createPublicClient({
-  chain: baseSepolia,
-  transport: http(`${process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL}`),
-});
 
-export const walletClient = createWalletClient({
-  chain: baseSepolia,
-  transport: custom(window.ethereum),
-});
 
 export const config = getDefaultConfig({
   appName: "PvPvAI",

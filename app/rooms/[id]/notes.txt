@@ -1,0 +1,47 @@
+const [agentPvpStatuses, setAgentPvpStatuses] = useState<{ [key: number]: any }>({});
+
+
+// useEffect(() => {
+//     const fetchPvpStatuses = async () => {
+//       if (!roundAgents || !roomData || !roundIdFromContract) return;
+//       const statuses: { [key: number]: any } = {};
+//       for (const agent of Object.values(roundAgents)) {
+//         try {
+//           const pvpStatus = await readContract(wagmiConfig, {
+//             abi: roomAbi,
+//             address: getAddress(roomData.contract_address || ""),
+//             functionName: "getPvpStatuses",
+//             args: [agent.walletAddress as `0x${string}`],
+//           });
+//           statuses[agent.agentData.id] = pvpStatus;
+//         } catch (error) {
+//           console.error(`Error fetching PVP status for agent ${agent.agentData.id}:`, error);
+//         }
+//       }
+//       setAgentPvpStatuses(statuses);
+//     };
+// fetchPvpStatuses();
+//     const interval = setInterval(fetchPvpStatuses, 4000);
+//     return () => clearInterval(interval);
+//   }, [roundAgents, roundIdFromContract, roomData])
+
+
+{/* <BuySellGameAvatarInteraction
+key={agent.agentData.id}
+roomData={roomData}
+id={agent.agentData.id}
+name={agent.agentData.display_name}
+imageUrl={agent.agentData.image_url || ""}
+borderColor={agent.agentData.color}
+sell={agentPositions[agent.agentData.id]?.sell || 0}
+buy={agentPositions[agent.agentData.id]?.buyPool || 0}
+hold={agentPositions[agent.agentData.id]?.hold || 0}
+variant="full"
+betAmount={agentPositions[agent.agentData.id]?.hold || 0}
+address={agent.walletAddress}
+isRoundOpen={isActiveRound} // FIXED: Only enable controls for current round when open
+// ADDED: Pass agent's PVP statuses
+pvpStatuses={agentPvpStatuses[agent.agentData.id] || []}
+isRoundActive={isRoundOpen}
+roundState={RoundState.OPEN}
+/> */}
