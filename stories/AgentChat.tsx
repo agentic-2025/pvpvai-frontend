@@ -39,9 +39,10 @@ export function AgentChat({
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
 
   // Scroll to the bottom when agent messages update.
-  useLayoutEffect(() => {
-    endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  // TODO: active later? this is annoying when new messages come in
+  // useLayoutEffect(() => {
+  //   endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" });
+  // }, [messages]);
 
   if (loading) {
     return (
