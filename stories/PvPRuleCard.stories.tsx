@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { Impact, PvPRuleCard } from "./PvPRuleCard";
+import { PvPRuleCard } from "./PvPRuleCard";
 
 const meta = {
   title: "Components/PvPRuleCard",
@@ -92,7 +92,6 @@ export const DeceiveSelected: Story = {
 export const Frenzy: Story = {
   args: {
     variant: "FRENZY",
-    impact: Impact.OP,
   },
 };
 
@@ -122,7 +121,7 @@ export const LowImpactRules: Story = {
     variant: "SILENCE",
   },
   decorators: [
-    (Story) => (
+    () => (
       <div className="w-[800px] grid grid-cols-4 gap-4">
         <PvPRuleCard variant="SILENCE" />
         <PvPRuleCard variant="DEAFEN" />
@@ -136,10 +135,9 @@ export const LowImpactRules: Story = {
 export const ModerateImpactRules: Story = {
   args: {
     variant: "POISON",
-    impact: Impact.MODERATE,
   },
   decorators: [
-    (Story) => (
+    () => (
       <div className="w-[800px] grid grid-cols-3 gap-4">
         <PvPRuleCard variant="POISON" />
         <PvPRuleCard variant="BLIND" />
@@ -152,10 +150,9 @@ export const ModerateImpactRules: Story = {
 export const HighImpactRules: Story = {
   args: {
     variant: "DECEIVE",
-    impact: Impact.HIGH,
   },
   decorators: [
-    (Story) => (
+    () => (
       <div className="w-[800px] grid grid-cols-3 gap-4">
         <PvPRuleCard variant="DECEIVE" />
         <PvPRuleCard variant="CONFUSE" />
@@ -169,12 +166,11 @@ export const HighImpactRules: Story = {
 export const OPRules: Story = {
   args: {
     variant: "FRENZY",
-    impact: Impact.OP,
   },
   decorators: [
-    (Story) => (
+    () => (
       <div className="w-[800px] grid grid-cols-1 gap-4">
-        <PvPRuleCard variant="FRENZY" impact={Impact.OP} />
+        <PvPRuleCard variant="FRENZY" />
       </div>
     ),
   ],
@@ -183,12 +179,11 @@ export const OPRules: Story = {
 export const GameBreakerRules: Story = {
   args: {
     variant: "CHAOS",
-    impact: Impact.GAME_BREAKER,
   },
   decorators: [
-    (Story) => (
+    () => (
       <div className="w-[800px] grid grid-cols-1 gap-4">
-        <PvPRuleCard variant="CHAOS" impact={Impact.GAME_BREAKER} />
+        <PvPRuleCard variant="CHAOS" />
       </div>
     ),
   ],
@@ -198,20 +193,19 @@ export const GameBreakerRules: Story = {
 export const AllVariants: Story = {
   args: {
     variant: "SILENCE",
-    impact: Impact.LOW,
   },
   decorators: [
-    (Story) => (
+    () => (
       <div className="w-[800px] flex flex-col gap-8">
         <div>
           <h3 className="text-lg font-medium text-gray-300 mb-4">
             Low Impact Rules
           </h3>
           <div className="grid grid-cols-4 gap-4">
-            <PvPRuleCard variant="SILENCE" impact={Impact.LOW} />
-            <PvPRuleCard variant="DEAFEN" impact={Impact.LOW} />
-            <PvPRuleCard variant="ATTACK" impact={Impact.LOW} />
-            <PvPRuleCard variant="OVERLOAD" impact={Impact.LOW} />
+            <PvPRuleCard variant="SILENCE" />
+            <PvPRuleCard variant="DEAFEN" />
+            <PvPRuleCard variant="ATTACK" />
+            <PvPRuleCard variant="OVERLOAD" />
           </div>
         </div>
 
@@ -220,9 +214,9 @@ export const AllVariants: Story = {
             Moderate Impact Rules
           </h3>
           <div className="grid grid-cols-3 gap-4">
-            <PvPRuleCard variant="POISON" impact={Impact.MODERATE} />
-            <PvPRuleCard variant="BLIND" impact={Impact.MODERATE} />
-            <PvPRuleCard variant="AMNESIA" impact={Impact.MODERATE} />
+            <PvPRuleCard variant="POISON" />
+            <PvPRuleCard variant="BLIND" />
+            <PvPRuleCard variant="AMNESIA" />
           </div>
         </div>
 
@@ -231,16 +225,16 @@ export const AllVariants: Story = {
             High Impact Rules
           </h3>
           <div className="grid grid-cols-3 gap-4">
-            <PvPRuleCard variant="DECEIVE" impact={Impact.HIGH} />
-            <PvPRuleCard variant="CONFUSE" impact={Impact.HIGH} />
-            <PvPRuleCard variant="MIND_CONTROL" impact={Impact.HIGH} />
+            <PvPRuleCard variant="DECEIVE" />
+            <PvPRuleCard variant="CONFUSE" />
+            <PvPRuleCard variant="MIND_CONTROL" />
           </div>
         </div>
 
         <div>
           <h3 className="text-lg font-medium text-gray-300 mb-4">OP Rules</h3>
           <div className="grid grid-cols-1 gap-4">
-            <PvPRuleCard variant="FRENZY" impact={Impact.OP} />
+            <PvPRuleCard variant="FRENZY" />
           </div>
         </div>
 
@@ -249,7 +243,7 @@ export const AllVariants: Story = {
             Game Breaker Rules
           </h3>
           <div className="grid grid-cols-1 gap-4">
-            <PvPRuleCard variant="CHAOS" impact={Impact.GAME_BREAKER} />
+            <PvPRuleCard variant="CHAOS" />
           </div>
         </div>
       </div>

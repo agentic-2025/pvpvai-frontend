@@ -10,7 +10,7 @@ import {
   WsMessageTypes,
 } from "@/lib/backend.types";
 import supabase from "@/lib/config";
-import { useQuery, UseQueryOptions, UseQueryResult } from "@tanstack/react-query";
+import { useQuery, UseQueryResult } from "@tanstack/react-query";
 import { z } from "zod";
 import { Json } from "../database.types";
 
@@ -18,7 +18,7 @@ const parseAgentMessage = (
   message: Json
 ): AllAiChatMessageSchemaTypes | null => {
   try {
-    console.log("Received message:", message);
+    // console.log("Received message:", message);
     if (!message) {
       throw new Error("Message is null");
     }

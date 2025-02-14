@@ -63,9 +63,7 @@ export function PublicChat({
               {messages.map((msg, index) => (
                 <PublicChatLine
                   key={index}
-                  // TODO below is technically the wrong field, should be the user id, but I'm exhausted
-                  address={String(msg.sender)}
-                  avatarUrl={""}
+                  address={msg.sender}
                   message={msg.content.text}
                   timestamp={new Date(msg.content.timestamp)}
                   variant={variant}

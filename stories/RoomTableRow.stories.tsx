@@ -1,7 +1,7 @@
+import { Table, TableBody } from "@/components/ui/table";
+import { generateRoom } from "@/lib/generators";
 import type { Meta, StoryObj } from "@storybook/react";
 import { RoomTableRow } from "./RoomTableRow";
-import { generateRoom } from "@/lib/generators";
-import { Table, TableBody } from "@/components/ui/table";
 
 const meta = {
   title: "Components/RoomTableRow",
@@ -29,13 +29,23 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const buySellRoom = generateRoom({
-  type_id: 1,
-});
+const buySellRoom = {
+  ...generateRoom({
+    type_id: 1,
+  }),
+  agents: [],
+  roundNumber: 1,
+  agentMessages: [],
+};
 
-const predictionRoom = generateRoom({
-  type_id: 2,
-});
+const predictionRoom = {
+  ...generateRoom({
+    type_id: 2,
+  }),
+  agents: [],
+  roundNumber: 1,
+  agentMessages: [],
+};
 
 export const BuySellVariant: Story = {
   args: {

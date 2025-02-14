@@ -1,14 +1,12 @@
 "use client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useUserQuery } from "@/lib/queries/userQueries";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import Jazzicon, { jsNumberForAddress } from "react-jazzicon";
 import { PlayerAddressChip } from "./PlayerAddressChip";
 
 export interface PublicChatLineProps {
-  id: number;
   address: string;
   avatarUrl?: string;
   message: string;
@@ -68,9 +66,8 @@ export function PublicChatLine({
 }: PublicChatLineProps) {
   const isCompact = variant === "compact";
 
-
   // Use the fallback address if user data isn't available
-  const displayAddress =  address;
+  const displayAddress = address;
   const displayAvatarUrl = avatarUrl;
 
   if (isCompact) {

@@ -1,46 +1,94 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { PublicChat } from "./PublicChat";
+import { WsMessageTypes } from "@/lib/backend.types";
 
-const MESSAGES = [
+// Define the message type to match what the component expects
+type ChatMessage = {
+  messageType: WsMessageTypes.PUBLIC_CHAT;
+  signature: string;
+  sender: string;
+  content: {
+    timestamp: number;
+    roomId: number;
+    roundId: number;
+    text: string;
+  };
+  avatarUrl?: string;
+};
+
+const MESSAGES: ChatMessage[] = [
   {
-    address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
-    avatarUrl: "https://github.com/shadcn.png",
-    message: "Hey everyone! How's it going?",
-    timestamp: new Date("2024-01-29T15:30:00"),
+    messageType: WsMessageTypes.PUBLIC_CHAT,
+    signature: "0x123...", // Mock signature
+    sender: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+    content: {
+      timestamp: new Date("2024-01-29T15:30:00").getTime(),
+      roomId: 1,
+      roundId: 1,
+      text: "Hey everyone! How's it going?",
+    },
   },
   {
-    address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
-    avatarUrl: "https://github.com/shadcn.png",
-    message: "I've been working on the new feature",
-    timestamp: new Date("2024-01-29T15:30:30"),
+    messageType: WsMessageTypes.PUBLIC_CHAT,
+    signature: "0x124...", // Mock signature
+    sender: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+    content: {
+      timestamp: new Date("2024-01-29T15:30:30").getTime(),
+      roomId: 1,
+      roundId: 1,
+      text: "I've been working on the new feature",
+    },
   },
   {
-    address: "0x1234567890123456789012345678901234567890",
-    message: "Just joined the chat! 👋",
-    timestamp: new Date("2024-01-29T15:31:00"),
+    messageType: WsMessageTypes.PUBLIC_CHAT,
+    signature: "0x125...", // Mock signature
+    sender: "0x1234567890123456789012345678901234567890",
+    content: {
+      timestamp: new Date("2024-01-29T15:31:00").getTime(),
+      roomId: 1,
+      roundId: 1,
+      text: "Just joined the chat! 👋",
+    },
   },
   {
-    address: "0x9876543210987654321098765432109876543210",
-    message: "Welcome! Glad to have you here.",
-    timestamp: new Date("2024-01-29T15:32:00"),
+    messageType: WsMessageTypes.PUBLIC_CHAT,
+    signature: "0x126...", // Mock signature
+    sender: "0x9876543210987654321098765432109876543210",
+    content: {
+      timestamp: new Date("2024-01-29T15:32:00").getTime(),
+      roomId: 1,
+      roundId: 1,
+      text: "Welcome! Glad to have you here.",
+    },
   },
   {
-    address: "0x9876543210987654321098765432109876543210",
-    message: "How's everyone doing today?",
-    timestamp: new Date("2024-01-29T15:32:10"),
+    messageType: WsMessageTypes.PUBLIC_CHAT,
+    signature: "0x127...", // Mock signature
+    sender: "0x9876543210987654321098765432109876543210",
+    content: {
+      timestamp: new Date("2024-01-29T15:32:10").getTime(),
+      roomId: 1,
+      roundId: 1,
+      text: "How's everyone doing today?",
+    },
   },
   {
-    address: "0xAbCdEf0123456789AbCdEf0123456789AbCdEf01",
-    avatarUrl: "https://github.com/shadcn.png",
-    message: "Has anyone started working on the new feature yet?",
-    timestamp: new Date("2024-01-29T15:33:00"),
+    messageType: WsMessageTypes.PUBLIC_CHAT,
+    signature: "0x128...", // Mock signature
+    sender: "0xAbCdEf0123456789AbCdEf0123456789AbCdEf01",
+    content: {
+      timestamp: new Date("2024-01-29T15:33:00").getTime(),
+      roomId: 1,
+      roundId: 1,
+      text: "Has anyone started working on the new feature yet?",
+    },
   },
 ];
 
-const MESSAGES_WITH_AVATARS = MESSAGES.map((msg) => ({
+const MESSAGES_WITH_AVATARS: ChatMessage[] = MESSAGES.map((msg) => ({
   ...msg,
   avatarUrl:
-    msg.address === "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
+    msg.sender === "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
       ? "https://github.com/shadcn.png"
       : undefined,
 }));
