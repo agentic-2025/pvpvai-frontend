@@ -33,7 +33,7 @@ import { useEffect, useState } from "react";
 import useWebSocket from "react-use-websocket";
 import { getAddress, PublicClient } from "viem";
 import { readContract } from "viem/actions";
-import { useAccount } from "wagmi";
+import { useAccount, usePublicClient } from "wagmi";
 import { z } from "zod";
 
 // --- Query Hooks ---
