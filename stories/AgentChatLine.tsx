@@ -85,7 +85,7 @@ export function AgentChatLine({
           name={agentName}
           color={agentBorderColor}
           borderColor={badgeBorderColor}
-          variant="sm"
+          variant="md"
           avatar={agentImageUrl}
           creatorAddress={creatorAddress || "0x0"}
           popularity={popularity}

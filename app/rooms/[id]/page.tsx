@@ -534,9 +534,10 @@ export default function RoomDetailPage() {
     data: roundPublicChatMessages,
     isLoading: isLoadingPublicChatMessages,
   } = useRoundUserMessages(currentRoundId, {
-    refetchInterval:
-      process.env.NEXT_PUBLIC_USE_POLLING_ON_CHAT === "true" ? 1000 : false,
-  });
+    // refetchInterval:
+      // process.env.NEXT_PUBLIC_USE_POLLING_ON_CHAT === "true" ? 1000 : false,
+  }
+);
   const { data: roundAgents, isLoading: isLoadingAgents } =
     useRoundAgents(currentRoundId);
   // const { data: gameMaster, isLoading: isLoadingGM } =

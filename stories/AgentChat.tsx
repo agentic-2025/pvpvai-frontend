@@ -40,9 +40,10 @@ export function AgentChat({
 
   // Scroll to the bottom when agent messages update.
   // TODO: active later? this is annoying when new messages come in
-  // useLayoutEffect(() => {
-  //   endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" });
-  // }, [messages]);
+  useLayoutEffect(() => {
+
+    endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   if (loading) {
     return (
