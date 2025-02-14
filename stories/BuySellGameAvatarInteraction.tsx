@@ -20,7 +20,6 @@ interface BuySellGameAvatarInteractionProps {
   showName?: boolean;
   address: string;
   roomData: Tables<"rooms">;
-  isRoundOpen: boolean; // ADDED: New prop for round state
   // ADDED: PVP statuses from contract
   pvpStatuses: {
     verb: string;
@@ -28,8 +27,6 @@ interface BuySellGameAvatarInteractionProps {
     endTime: number;
     parameters: string;
   }[];
-  isRoundActive: boolean;
-  // roundState: RoundState;
   isRoundTimerExpired: boolean;
 }
 
@@ -50,7 +47,6 @@ export const BuySellGameAvatarInteraction: FC<
   roomData,
   pvpStatuses, // from contract
   isRoundTimerExpired,
-  // roundState,
 }) => {
   return (
     <div
@@ -60,11 +56,7 @@ export const BuySellGameAvatarInteraction: FC<
         isRoundTimerExpired && "opacity-50 cursor-not-allowed"
       )}
     >
-      <div
-        className={cn(
-          "flex flex-col items-center gap-2",
-        )}
-      >
+      <div className={cn("flex flex-col items-center gap-2")}>
         <AgentAvatarInteraction
           roomData={roomData}
           name={name}

@@ -19,7 +19,7 @@ import {
 } from "@/lib/backend.types";
 import supabase from "@/lib/config";
 import { roomAbi } from "@/lib/contract.types";
-import { Database, Tables } from "@/lib/database.types";
+import { Tables } from "@/lib/database.types";
 import {
   useRoundAgentMessages,
   useRoundUserMessages,
@@ -243,6 +243,10 @@ function RoundDetailsAndNavigation({
         <Skeleton className="h-12 w-32" />
         <Skeleton className="h-6 w-32" />
         <Skeleton className="h-8 w-32" />
+        <div className="flex items-center gap-x-2">
+          <Skeleton className="w-10 h-10 rounded" />
+          <Skeleton className="h-6 w-32" />
+        </div>
       </div>
     );
   }
@@ -251,7 +255,7 @@ function RoundDetailsAndNavigation({
 
   return (
     <div className="scroll-thin bg-card p-3">
-      <div className="bg-[#202123] rounded-lgpy-2 flex flex-col items-center justify-center gap-y-4">
+      <div className="bg-[#202123] rounded-lg py-2 flex flex-col items-center justify-center gap-y-4">
         <h2
           className="text-2xl font-bold truncate text-center"
           style={{ color: roomData.color || "inherit" }}
@@ -279,7 +283,33 @@ function RoundDetailsAndNavigation({
           </button>
         </div>
 
-        <span className="text-lg font-semibold">
+        <div className="flex flex-col items-center gap-y-2">
+          {/* <span className="text-sm text-gray-400">Buy / Hold / Sell</span> */}
+          {(() => {
+            try {
+              const token = roomData.room_config?.token;
+              if (!token) return null;
+
+              return (
+                <div className="flex items-center gap-x-2">
+                  <img
+                    src={token.image_url}
+                    alt={token.name}
+                    className="w-8 h-8"
+                  />
+                  <span className="text-lg">
+                    {token.name} (${token.symbol})
+                  </span>
+                </div>
+              );
+            } catch (error) {
+              console.error("Error parsing room config:", error);
+              return null;
+            }
+          })()}
+        </div>
+
+        <span className="text-md font-semibold">
           {participants} {participants === 1 ? "person" : "people"} watching
         </span>
 
@@ -427,32 +457,7 @@ function AgentsDisplay({
           <AgentsSkeleton />
         ) : (
           <div className="flex flex-col items-center justify-center w-full h-full">
-            <div className="flex flex-col items-center justify-center gap-y-2 w-full pb-4 border-b border-gray-800 mb-4">
-              <span className="text-gray-400">Agents are discussing:</span>
-              {(() => {
-                try {
-                  const token = roomData.room_config?.token;
-                  if (!token)
-                    return <div>No token specified in room config</div>;
-
-                  return (
-                    <div className="text-xl font-medium flex items-center gap-x-2">
-                      <img
-                        src={token.image_url}
-                        alt={token.name}
-                        className="w-14 h-14 mr-2"
-                      />
-                      {token.name} (${token.symbol})
-                    </div>
-                  );
-                } catch (error) {
-                  console.error("Error parsing room config:", error);
-                  return null;
-                }
-              })()}
-            </div>
-
-            <div className="flex flex-wrap justify-center items-center gap-8 overflow-y-auto scroll-thin w-full max-h-[80%] p-4">
+            <div className="flex flex-wrap justify-center items-center gap-8 overflow-y-auto scroll-thin w-full max-h-[95%] p-4">
               {roundAgents && Object.values(roundAgents).length > 0 ? (
                 Object.values(roundAgents).map((agent) => (
                   <BuySellGameAvatarInteraction
@@ -522,7 +527,6 @@ export default function RoomDetailPage() {
     roundList[currentRoundIndex]?.underlying_contract_round;
   const roundStatus = roundList[currentRoundIndex]?.status;
   const roundActive = roundList[currentRoundIndex]?.active;
-
 
   const { data: roundAgentMessages, isLoading: isLoadingRoundAgentMessages } =
     useRoundAgentMessages(currentRoundId);
@@ -786,7 +790,6 @@ export default function RoomDetailPage() {
         <span>Room not found</span>
       </div>
     );
-
 
   const isRoundTimerExpired = (() => {
     const currentRoundCreatedAt = roundList[0]?.created_at;
