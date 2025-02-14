@@ -354,11 +354,12 @@ function AgentsDisplay({
       const statuses: { [key: number]: any } = {};
       for (const agent of Object.values(roundAgents)) {
         try {
-          const pvpStatus = await readContract(wagmiConfig, {
+          const pvpStatus = await readContract(publicClient, {
             abi: roomAbi,
             address: getAddress(roomData.contract_address || ""),
             functionName: "getPvpStatuses",
             args: [agent.walletAddress as `0x${string}`],
+            account: undefined,
           });
           statuses[agent.agentData.id] = pvpStatus;
         } catch (error) {
@@ -367,10 +368,10 @@ function AgentsDisplay({
       }
       setAgentPvpStatuses(statuses);
     };
-  fetchPvpStatuses();
+    fetchPvpStatuses();
     const interval = setInterval(fetchPvpStatuses, 4000);
     return () => clearInterval(interval);
-  }, [roundAgents, roundIdFromContract, roomData])
+  }, [roundAgents, roundIdFromContract, roomData, publicClient]);
 
 
 
