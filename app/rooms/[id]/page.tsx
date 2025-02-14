@@ -473,7 +473,9 @@ export default function RoomDetailPage() {
     data: roundPublicChatMessages,
     isLoading: isLoadingPublicChatMessages,
     refetch: refetchRoundPublicChatMessages,
-  } = useRoundUserMessages(currentRoundId);
+  } = useRoundUserMessages(currentRoundId, {
+    refetchInterval: 1000,
+  });
   const { data: roundAgents, isLoading: isLoadingAgents } =
     useRoundAgents(currentRoundId);
   // const { data: gameMaster, isLoading: isLoadingGM } =
@@ -777,7 +779,8 @@ export default function RoomDetailPage() {
             {/* Public Chat (currently commented out) */}
             <div className="flex flex-col bg-card rounded-lg p-3 overflow-y-auto h-full">
               <PublicChat
-                messages={[...(roundPublicChatMessages || []), ...messages]}
+                // messages={[...(roundPublicChatMessages || []), ...messages]}
+                messages={[...(roundPublicChatMessages || [])]}
                 className="h-full"
                 currentUserAddress={String(currentUserId)}
                 loading={isLoadingPublicChatMessages}

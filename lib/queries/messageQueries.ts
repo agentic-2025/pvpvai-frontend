@@ -10,7 +10,7 @@ import {
   WsMessageTypes,
 } from "@/lib/backend.types";
 import supabase from "@/lib/config";
-import { useQuery, UseQueryResult } from "@tanstack/react-query";
+import { useQuery, UseQueryOptions, UseQueryResult } from "@tanstack/react-query";
 import { z } from "zod";
 import { Json } from "../database.types";
 
@@ -126,9 +126,11 @@ export const useRoundAgentMessages = (
 };
 
 export const useRoundUserMessages = (
-  roundId: number
+  roundId: number,
+  options?: any
 ): UseQueryResult<z.infer<typeof publicChatMessageOutputSchema>[]> => {
   return useQuery({
+    ...options,
     queryKey: ["roundUserMessages", roundId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -136,7 +138,8 @@ export const useRoundUserMessages = (
         .select(`message`)
         .eq("message->>messageType", WsMessageTypes.PUBLIC_CHAT)
         .eq("round_id", roundId)
-        .order("created_at", { ascending: false })
+        // .order("created_at", { ascending: false })
+        .order("created_at", { ascending: true })
         .limit(100); //TODO, implement infinite scroll or pagination later
 
       if (error) {
@@ -165,5 +168,6 @@ export const useRoundUserMessages = (
       return res;
     },
     enabled: !!roundId,
+    ...options,
   });
 };
