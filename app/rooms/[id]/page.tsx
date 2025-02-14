@@ -2,7 +2,7 @@
 
 import Loader from "@/components/loader";
 import { Skeleton } from "@/components/ui/skeleton";
-import { wagmiConfig } from "@/components/wrapper/wrapper";
+// import { wagmiConfig } from "@/components/wrapper/wrapper";
 import { useToast } from "@/hooks/use-toast";
 import {
   agentDecisionAiChatOutputSchema,
@@ -24,7 +24,6 @@ import {
   useRoundAgentMessages,
   useRoundUserMessages,
 } from "@/lib/queries/messageQueries";
-import { AgentAvatar } from "@/stories/AgentAvatar";
 import { AgentChat } from "@/stories/AgentChat";
 import { BuySellGameAvatarInteraction } from "@/stories/BuySellGameAvatarInteraction";
 import { PublicChat } from "@/stories/PublicChat";
@@ -139,10 +138,10 @@ const useRoundAgents = (roundId: number) => {
   });
 };
 
-const fetchCurrentRoundId = async (contractAddress: string) => {
+const fetchCurrentRoundId = async (contractAddress: string, publicClient: PublicClient) => {
   try {
     console.log("Fetching current contract round ID");
-    const result = await readContract(wagmiConfig, {
+    const result = await readContract(publicClient, {
       abi: roomAbi,
       address: getAddress(contractAddress),
       functionName: "currentRoundId",
@@ -154,9 +153,9 @@ const fetchCurrentRoundId = async (contractAddress: string) => {
   }
 };
 
-const getRoundEndTime = async (contractAddress: string, roundId: bigint) => {
+const getRoundEndTime = async (contractAddress: string, roundId: bigint, publicClient: PublicClient) => {
   try {
-    const result = await readContract(wagmiConfig, {
+    const result = await readContract(publicClient, {
       abi: roomAbi,
       address: getAddress(contractAddress),
       functionName: "getRoundEndTime",
@@ -190,10 +189,11 @@ const formatTime = (seconds: number) => {
 const getAgentPosition = async (
   contractAddress: string,
   roundId: bigint,
-  agentAddress: `0x${string}`
+  agentAddress: `0x${string}`,
+  publicClient: PublicClient
 ) => {
   try {
-    const result = await readContract(wagmiConfig, {
+    const result = await readContract(publicClient, {
       abi: roomAbi,
       address: getAddress(contractAddress),
       functionName: "getAgentPosition",
@@ -334,11 +334,13 @@ function AgentsDisplay({
   isLoadingAgents,
   roundIdFromContract,
   roomData,
+  publicClient,
 }: {
   roundAgents: RoundAgentLookup | undefined;
   isLoadingAgents: boolean;
   roundIdFromContract: bigint | null;
   roomData: Tables<"rooms">;
+  publicClient: PublicClient;
 }) {
   const [agentPositions, setAgentPositions] = useState<{ [key: number]: any }>(
     {}
@@ -355,7 +357,8 @@ function AgentsDisplay({
           const position = await getAgentPosition(
             roomData.contract_address || "",
             roundIdFromContract,
-            agent.walletAddress as `0x${string}`
+            agent.walletAddress as `0x${string}`,
+            publicClient
           );
           positions[agent.agentData.id] = position;
         } catch (error) {
@@ -373,7 +376,7 @@ function AgentsDisplay({
     const interval = setInterval(fetchAgentPositions, 4000);
 
     return () => clearInterval(interval);
-  }, [roundAgents, roundIdFromContract, roomData]);
+  }, [roundAgents, roundIdFromContract, roomData, publicClient]);
 
   return (
     <div className="w-full h-[40%] bg-card rounded-lg p-3">
@@ -660,14 +663,15 @@ export default function RoomDetailPage() {
 
     const fetchRoundIdFromContract = async () => {
       const roundIdFromContract = await fetchCurrentRoundId(
-        roomData.contract_address || ""
+        roomData.contract_address || "",
+        publicClient
       );
 
       console.log("roundIdFromContract", roundIdFromContract);
       setRoundIdFromContract(roundIdFromContract);
     };
     fetchRoundIdFromContract();
-  }, [currentRoundId, roomData]);
+  }, [currentRoundId, roomData, publicClient]);
 
 
   useEffect(() => {
@@ -750,6 +754,7 @@ export default function RoomDetailPage() {
               isLoadingAgents={isLoadingAgents}
               roundIdFromContract={roundIdFromContract}
               roomData={roomData}
+              publicClient={publicClient}
             />
             {/* Agent Chat: shows only agent messages */}
             <div className="flex-1 bg-card rounded-lg overflow-hidden w-full">

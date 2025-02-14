@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -24,10 +25,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { coreAbi } from "@/lib/contract.types";
-import { useAccount, usePublicClient, useWriteContract } from "wagmi";
+import { useAccount, usePublicClient, useWriteContract, useWalletClient } from "wagmi";
 import { Database } from "@/lib/database.types";
 import { formatEther } from "viem";
-import { wagmiConfig, walletClient } from "@/components/wrapper/wrapper";
+// import { wagmiConfig, walletClient } from "@/components/wrapper/wrapper";
 
 // Helper function to generate a random hex color.
 const generateRandomColor = (includeHash = false) => {
@@ -44,6 +45,7 @@ const totalSteps = 7;
 
 export default function CreateAgentModal() {
   const publicClient = usePublicClient();
+  const { data: walletClient } = useWalletClient();
   const [step, setStep] = useState(0);
   const [open, setOpen] = useState(false);
   const [agentData, setAgentData] = useState({
@@ -147,7 +149,7 @@ export default function CreateAgentModal() {
       return null;
     }
     try {
-      const result = await publicClient?.readContract({
+      const result = await publicClient.readContract({
         abi: coreAbi,
         address: process.env.NEXT_PUBLIC_CORE_ADDRESS as `0x${string}`,
         functionName: "getFees",
@@ -160,30 +162,39 @@ export default function CreateAgentModal() {
   };
 
   useEffect(() => {
+    if (!publicClient) return;
+    
     getFees()
       .then((result) => {
         setFees(result);
       })
       .catch((error) => console.error("Error in getFees useEffect:", error));
-  }, []);
+  }, [publicClient]); // Add publicClient to dependency array
 
   // In the agent flow, first perform the deposit call, then send a backend request.
   const handleSubmit = async () => {
     try {
-      if (fees && userAddress) {
-        const { request } = await wagmiConfig.simulateContract({
+      if (!publicClient) {
+        throw new Error("Public client not available");
+      }
+      
+      if (fees && userAddress && walletClient) {
+        const { request } = await publicClient.simulateContract({
           abi: coreAbi,
           address: process.env.NEXT_PUBLIC_CORE_ADDRESS as `0x${string}`,
           functionName: "deposit",
           value: fees[0], // Assuming fees[0] is the deposit amount as BigInt
           account: userAddress,
         });
-        const depositTx = await walletClient.writeContract(request);
-        console.log("Deposit successful:", depositTx);
-        // Optionally, you can capture the transaction hash:
-        // const depositTxHash = depositTx.transactionHash;
+        
+        if (!walletClient) {
+          throw new Error("Wallet client not available");
+        }
+
+        const hash = await walletClient.writeContract(request);
+        console.log("Deposit successful, hash:", hash);
       } else {
-        throw new Error("Fees or user address not available");
+        throw new Error("Fees, user address, or wallet client not available");
       }
     } catch (error) {
       console.error("Error during deposit:", error);
