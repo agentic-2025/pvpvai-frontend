@@ -1,6 +1,6 @@
 "use client";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { chainMetadata, formatTimeLeft } from "@/lib/utils";
+import { chainMetadata } from "@/lib/utils";
 import { RoomWithRelations } from "@/stories/RoomTable";
 import Image from "next/image";
 import Link from "next/link";

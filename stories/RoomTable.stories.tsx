@@ -1,6 +1,7 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { RoomTable } from "./RoomTable";
 import { generateMany, generateRoom } from "@/lib/generators";
+import type { Meta, StoryObj } from "@storybook/react";
+import type { RoomWithRelations } from "./RoomTable";
+import { RoomTable } from "./RoomTable";
 
 const meta = {
   title: "Components/RoomTable",
@@ -29,7 +30,40 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const rooms = generateMany(generateRoom, 5);
+const rooms: RoomWithRelations[] = generateMany(generateRoom, 5).map(
+  (room) => ({
+    ...room,
+    participants: 3,
+    agents: [
+      {
+        id: 1,
+        displayName: "Agent 1",
+        image: null,
+        color: "#FF0000",
+      },
+      {
+        id: 2,
+        displayName: "Agent 2",
+        image: null,
+        color: "#00FF00",
+      },
+    ],
+    roundNumber: 1,
+    agentMessages: [
+      {
+        agentId: 1,
+        message: "Hello",
+        createdAt: new Date().toISOString(),
+        agentDetails: {
+          id: 1,
+          displayName: "Agent 1",
+          image: null,
+          color: "#FF0000",
+        },
+      },
+    ],
+  })
+);
 
 export const Default: Story = {
   args: {
@@ -48,7 +82,7 @@ export const WithVariantControl: Story = {
 export const BuySellVariant: Story = {
   args: {
     rooms,
-    roomType: "Buy Sell",
+    roomType: "Buy / Hold / Sell",
     showTabs: false,
   },
 };
@@ -56,7 +90,7 @@ export const BuySellVariant: Story = {
 export const PredictionMarketVariant: Story = {
   args: {
     rooms,
-    roomType: "Prediction Market",
+    roomType: "Long / Short",
     showTabs: false,
   },
 };

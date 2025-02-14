@@ -58,18 +58,18 @@ const baseMessage: z.infer<typeof pvpActionEnactedAiChatOutputSchema> = {
   sender: "0xsender",
   content: {
     timestamp: Date.now(),
+    effectEndTime: Date.now() + 1000 * 60 * 60 * 24,
     roomId: 1,
     roundId: 1,
-    instigator: 48,
     instigatorAddress: "0x1234567890123456789012345678901234567890",
     txHash: "0xtxhash",
     fee: 0.001,
     action: {
-      actionType: PvpActions.ATTACK, // Default action, will be overridden in stories
+      actionType: PvpActions.ATTACK,
       actionCategory: PvpActionCategories.DIRECT_ACTION,
       parameters: {
-        target: 49,
-        message: "message wow", // Will be overridden in stories
+        target: "49",
+        message: "message wow",
       },
     },
   },
@@ -77,20 +77,8 @@ const baseMessage: z.infer<typeof pvpActionEnactedAiChatOutputSchema> = {
 
 export const Attack: Story = {
   args: {
-    message: {
-      ...baseMessage,
-      content: {
-        ...baseMessage.content,
-        action: {
-          actionType: PvpActions.ATTACK,
-          actionCategory: PvpActionCategories.DIRECT_ACTION,
-          parameters: {
-            target: 49,
-            message: "You've been attacked!",
-          },
-        },
-      },
-    },
+    message: baseMessage,
+    roomId: 1,
   },
 };
 
@@ -102,13 +90,15 @@ export const Silence: Story = {
         ...baseMessage.content,
         action: {
           actionType: PvpActions.SILENCE,
+          actionCategory: PvpActionCategories.STATUS_EFFECT,
           parameters: {
-            target: 50,
+            target: "50",
             duration: 30,
           },
         },
       },
-    } as z.infer<typeof pvpActionEnactedAiChatOutputSchema>,
+    },
+    roomId: 1,
   },
 };
 
@@ -122,12 +112,13 @@ export const Deafen: Story = {
           actionType: PvpActions.DEAFEN,
           actionCategory: PvpActionCategories.STATUS_EFFECT,
           parameters: {
-            target: 51,
+            target: "51",
             duration: 30,
           },
         },
       },
-    } as z.infer<typeof pvpActionEnactedAiChatOutputSchema>,
+    },
+    roomId: 1,
   },
 };
 
@@ -139,8 +130,9 @@ export const Poison: Story = {
         ...baseMessage.content,
         action: {
           actionType: PvpActions.POISON,
+          actionCategory: PvpActionCategories.STATUS_EFFECT,
           parameters: {
-            target: 52,
+            target: "52",
             find: "hello",
             replace: "goodbye",
             duration: 30,
@@ -148,6 +140,7 @@ export const Poison: Story = {
           },
         },
       },
-    } as z.infer<typeof pvpActionEnactedAiChatOutputSchema>,
+    },
+    roomId: 1,
   },
 };
